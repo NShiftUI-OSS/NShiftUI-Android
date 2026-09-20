@@ -1,0 +1,109 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100/
+.Trashes/
+.fseventsd/
+.TemporaryItems/
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.nfs*
+
+# Gradle
+.gradle/
+build/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# CI version overlay working dir (never commit)
+.ci-version/
+
+# Local SDK / signing (machine-specific; never commit)
+local.properties
+signing.properties
+keystore.properties
+*.jks
+*.keystore
+!debug.keystore
+
+# Android / AGP outputs
+*.apk
+*.aab
+*.aar
+*.ap_
+*.dex
+*.class
+*.hprof
+.cxx/
+.externalNativeBuild/
+captures/
+.navigation/
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+lint-results*.xml
+lint-results*.html
+*.apk.d
+
+# Kotlin compiler incremental cache
+.kotlin/
+
+# Coverage / profiling
+.coverage/
+coverage/
+jacoco/
+*.exec
+*.ec
+
+# IntelliJ / Android Studio
+*.iml
+.idea/
+.fleet/
+out/
+
+# Eclipse / ADT leftovers
+.project
+.classpath
+.settings/
+.metadata/
+bin/
+gen/
+proguard/
+
+# Editors
+.vscode/
+.history/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Patch / backup
+*.orig
+*.bak
+*.tmp
+*.temp
+
+# JVM crash dumps
+hs_err_pid*
+replay_pid*
+
+# Logs
+*.log
+
+# Local environment
+.env
+.env.*
+!.env.example

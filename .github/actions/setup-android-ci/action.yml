@@ -1,0 +1,12 @@
+name: setup-android-ci
+description: JDK 21 and Gradle cache
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: "21"
+    - uses: gradle/actions/setup-gradle@v4
+      with:
+        cache-read-only: false
