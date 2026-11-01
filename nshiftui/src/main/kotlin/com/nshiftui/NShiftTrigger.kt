@@ -16,7 +16,7 @@ data class NShiftTrigger(val rawValue: String) {
             if (value.length <= 2 || !value.startsWith("on")) {
                 return false
             }
-            if (!value.all(NShiftASCII::isASCIILetter)) {
+            if (!value.all { NShiftASCII.isASCIILetter(it) || NShiftASCII.isASCIIDigit(it) }) {
                 return false
             }
 
@@ -27,6 +27,9 @@ data class NShiftTrigger(val rawValue: String) {
                 }
                 index += 1
                 while (index < value.length && NShiftASCII.isLowercaseASCIILetter(value[index])) {
+                    index += 1
+                }
+                while (index < value.length && NShiftASCII.isASCIIDigit(value[index])) {
                     index += 1
                 }
             }

@@ -44,7 +44,11 @@ class NShiftIdentifierTests : FunSpec({
         NShiftTrigger.isValid("OnTap") shouldBe false
         NShiftTrigger.isValid("ontap") shouldBe false
         NShiftTrigger.isValid("on_tap") shouldBe false
-        NShiftTrigger.isValid("onTap1") shouldBe false
+        NShiftTrigger.isValid("onTap1") shouldBe true
+        NShiftTrigger.isValid("onStatusCode404") shouldBe true
+        NShiftTrigger.isValid("onStatusCode200") shouldBe true
+        NShiftTrigger.isValid("on404") shouldBe false
+        NShiftTrigger.isValid("on1") shouldBe false
         NShiftTrigger.isValid("tapOn") shouldBe false
         NShiftTrigger.isValid("onToque") shouldBe true
         NShiftTrigger.isValid("onTapé") shouldBe false
