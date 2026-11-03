@@ -123,7 +123,12 @@ inline fun <reified P : NShiftPlugin> NShiftDependencyRegistering.registerPlugin
         isContainer = sample is NShiftPluginContainer<*>,
     ) { model, resolver, eventHandler, engine, renderID, viewModel ->
         val plugin = constructor.newInstance()
-        if (plugin.bind(model, resolver, eventHandler, engine, renderID, viewModel)) plugin else null
+        val bound = if (plugin is NShiftPluginWithViewModel) {
+            plugin.bind(model, resolver, eventHandler, engine, renderID, viewModel)
+        } else {
+            plugin.bind(model, resolver, eventHandler, engine, renderID)
+        }
+        if (bound) plugin else null
     }
 }
 
@@ -186,8 +191,6 @@ abstract class NShiftPlugin(
         protected set
     var engine: NShiftEngine? = null
         protected set
-    var viewModel: NShiftPluginViewModel? = null
-        protected set
     lateinit var renderID: NShiftRenderID
         protected set
     var metadataValue: NShiftMetadata? = null
@@ -200,7 +203,7 @@ abstract class NShiftPlugin(
 
     @Composable
     fun children(transform: @Composable (NShiftPluginModel, NShiftPluginNode) -> Unit = { _, node ->
-        NShiftNodeView(node = node, engine = requireEngineTree(), viewModel = viewModel)
+        NShiftNodeView(node = node, engine = requireEngineTree(), viewModel = parentViewModel())
     }) {
         val tree = requireEngineTree()
         val parent = tree.node(renderID) ?: return
@@ -215,7 +218,7 @@ abstract class NShiftPlugin(
     fun slots(
         name: NShiftSlotName,
         transform: @Composable (NShiftPluginModel, NShiftPluginNode) -> Unit = { _, node ->
-            NShiftNodeView(node = node, engine = requireEngineTree(), viewModel = viewModel)
+            NShiftNodeView(node = node, engine = requireEngineTree(), viewModel = parentViewModel())
         },
     ) {
         val tree = requireEngineTree()
@@ -232,7 +235,7 @@ abstract class NShiftPlugin(
     fun <Key : NShiftSlotKey> slots(
         key: Key,
         transform: @Composable (NShiftPluginModel, NShiftPluginNode) -> Unit = { _, node ->
-            NShiftNodeView(node = node, engine = requireEngineTree())
+            NShiftNodeView(node = node, engine = requireEngineTree(), viewModel = parentViewModel())
         },
     ) {
         slots(key.slotName, transform)
@@ -244,7 +247,6 @@ abstract class NShiftPlugin(
         eventHandler: NShiftEventHandler,
         engine: NShiftEngine?,
         renderID: NShiftRenderID,
-        viewModel: NShiftPluginViewModel?,
     ): Boolean {
         if (metadataType != null) {
             val unwrapped = model.metadata?.unwrap(metadataType.java) ?: return false
@@ -257,22 +259,50 @@ abstract class NShiftPlugin(
         this.eventHandler = eventHandler
         this.engine = engine
         this.renderID = renderID
-        this.viewModel = viewModel
         return onBind()
     }
 
     protected open fun onBind(): Boolean = true
+
+    open fun parentViewModel(): NShiftPluginViewModel? = null
+
+    inline fun <reified T : NShiftPluginViewModel> optionalViewModel(): T? = parentViewModel() as? T
 
     protected fun requireEngineTree(): NShiftEngineTree =
         engine as? NShiftEngineTree
             ?: error("Plugin children/slots require an NShiftEngineTree")
 }
 
+abstract class NShiftPluginWithViewModel(
+    name: String,
+    version: String,
+    metadataType: KClass<out NShiftMetadata>? = null,
+) : NShiftPlugin(name, version, metadataType) {
+    var viewModel: NShiftPluginViewModel? = null
+        protected set
+
+    fun bind(
+        model: NShiftPluginModel,
+        resolver: NShiftDependencyResolver,
+        eventHandler: NShiftEventHandler,
+        engine: NShiftEngine?,
+        renderID: NShiftRenderID,
+        viewModel: NShiftPluginViewModel?,
+    ): Boolean {
+        val bound = bind(model, resolver, eventHandler, engine, renderID)
+        if (!bound) return false
+        this.viewModel = viewModel
+        return true
+    }
+
+    override fun parentViewModel(): NShiftPluginViewModel? = viewModel
+}
+
 abstract class NShiftPluginWithMetadata<M : NShiftMetadata>(
     name: String,
     version: String,
     metadataType: KClass<M>,
-) : NShiftPlugin(name, version, metadataType) {
+) : NShiftPluginWithViewModel(name, version, metadataType) {
     val metadata: M
         get() = metadataValue as M
 }
@@ -283,12 +313,17 @@ abstract class NShiftPluginContainer<VM : NShiftPluginViewModel>(
     metadata: KClass<out NShiftMetadata>? = null,
     private val viewModelType: KClass<VM>,
 ) : NShiftPlugin(name, version, metadata) {
+    lateinit var viewModel: VM
+        private set
+
     override fun onBind(): Boolean {
         val resolved = resolver.resolve(viewModelType) ?: return false
         viewModel = resolved
         engine?.pluginViewModel = resolved
         return true
     }
+
+    override fun parentViewModel(): NShiftPluginViewModel? = viewModel
 }
 
 abstract class NShiftEvent(

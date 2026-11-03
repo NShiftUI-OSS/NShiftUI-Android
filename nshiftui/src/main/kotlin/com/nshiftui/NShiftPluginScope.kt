@@ -8,14 +8,14 @@ class NShiftPluginScope(@PublishedApi internal val plugin: NShiftPlugin) {
     val eventHandler: NShiftEventHandler get() = plugin.eventHandler
     val engine: NShiftEngine? get() = plugin.engine
     val renderID: NShiftRenderID get() = plugin.renderID
-    val viewModel: NShiftPluginViewModel? get() = plugin.viewModel
+    val viewModel: NShiftPluginViewModel? get() = plugin.parentViewModel()
 
     inline fun <reified T : NShiftMetadata> metadata(): T = plugin.metadata()
 
     @Composable
     fun children(
         transform: @Composable (NShiftPluginModel, NShiftPluginNode) -> Unit = { _, node ->
-            NShiftNodeView(node = node, engine = pluginEngineTree(), viewModel = viewModel)
+            NShiftNodeView(node = node, engine = pluginEngineTree(), viewModel = plugin.parentViewModel())
         },
     ) {
         plugin.children(transform)
@@ -25,7 +25,7 @@ class NShiftPluginScope(@PublishedApi internal val plugin: NShiftPlugin) {
     fun slots(
         name: NShiftSlotName,
         transform: @Composable (NShiftPluginModel, NShiftPluginNode) -> Unit = { _, node ->
-            NShiftNodeView(node = node, engine = pluginEngineTree(), viewModel = viewModel)
+            NShiftNodeView(node = node, engine = pluginEngineTree(), viewModel = plugin.parentViewModel())
         },
     ) {
         plugin.slots(name, transform)
@@ -35,7 +35,7 @@ class NShiftPluginScope(@PublishedApi internal val plugin: NShiftPlugin) {
     fun <Key : NShiftSlotKey> slots(
         key: Key,
         transform: @Composable (NShiftPluginModel, NShiftPluginNode) -> Unit = { _, node ->
-            NShiftNodeView(node = node, engine = pluginEngineTree(), viewModel = viewModel)
+            NShiftNodeView(node = node, engine = pluginEngineTree(), viewModel = plugin.parentViewModel())
         },
     ) {
         plugin.slots(key, transform)

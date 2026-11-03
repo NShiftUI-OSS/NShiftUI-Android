@@ -15,6 +15,9 @@ interface NShiftEngine {
     fun replaceEvent(eventID: String, event: NShiftEventModel)
 }
 
+inline fun <reified T : NShiftPluginViewModel> NShiftEngine.optionalPluginViewModel(): T? =
+    pluginViewModel as? T
+
 interface NShiftEngineTree : NShiftEngine {
     val root: NShiftPluginNode
 
