@@ -16,6 +16,8 @@ open class NShiftDefaultEngine(
     private val nodesByRenderID = mutableMapOf<NShiftRenderID, NShiftPluginNode>()
     private val eventsByID = mutableMapOf<String, NShiftEventLocation>()
 
+    override var pluginViewModel: NShiftPluginViewModel? = null
+
     override val rootID: String
         get() = root.model.id ?: root.renderId.rawValue
 
@@ -23,8 +25,11 @@ open class NShiftDefaultEngine(
         indexSubtree(root)
     }
 
-    override fun makeView(node: NShiftPluginNode): (@androidx.compose.runtime.Composable () -> Unit)? =
-        pluginStore.resolve(node.model, node.renderId)
+    override fun makeView(
+        node: NShiftPluginNode,
+        viewModel: NShiftPluginViewModel?,
+    ): (@androidx.compose.runtime.Composable () -> Unit)? =
+        pluginStore.resolve(node.model, node.renderId, viewModel)
 
     override fun node(id: String): NShiftPluginNode? =
         nodesByServerID[id] ?: nodesByRenderID[NShiftRenderID(id)]

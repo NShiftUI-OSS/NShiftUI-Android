@@ -15,8 +15,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun NShiftNodeView(node: NShiftPluginNode, engine: NShiftEngineTree) {
-    val content = engine.makeView(node)
+fun NShiftNodeView(
+    node: NShiftPluginNode,
+    engine: NShiftEngineTree,
+    viewModel: NShiftPluginViewModel? = null,
+) {
+    val content = engine.makeView(node, viewModel)
     if (content != null) {
         content()
     }

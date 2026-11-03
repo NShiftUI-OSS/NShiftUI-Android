@@ -50,6 +50,7 @@ interface NShiftPluginStore {
     fun resolve(
         plugin: NShiftPluginModel,
         renderID: NShiftRenderID = NShiftRenderID.root,
+        viewModel: NShiftPluginViewModel? = null,
     ): (@Composable () -> Unit)?
 }
 
@@ -57,6 +58,7 @@ class NShiftEmptyPluginStore : NShiftPluginStore {
     override fun resolve(
         plugin: NShiftPluginModel,
         renderID: NShiftRenderID,
+        viewModel: NShiftPluginViewModel?,
     ): (@Composable () -> Unit)? = null
 }
 

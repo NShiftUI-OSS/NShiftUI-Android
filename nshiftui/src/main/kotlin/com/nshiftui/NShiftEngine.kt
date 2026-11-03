@@ -2,6 +2,7 @@ package com.nshiftui
 
 interface NShiftEngine {
     val rootID: String
+    var pluginViewModel: NShiftPluginViewModel?
 
     suspend fun handle(trigger: NShiftTrigger, pluginID: String)
 
@@ -21,5 +22,8 @@ interface NShiftEngineTree : NShiftEngine {
 
     fun node(renderID: NShiftRenderID): NShiftPluginNode?
 
-    fun makeView(node: NShiftPluginNode): (@androidx.compose.runtime.Composable () -> Unit)?
+    fun makeView(
+        node: NShiftPluginNode,
+        viewModel: NShiftPluginViewModel? = null,
+    ): (@androidx.compose.runtime.Composable () -> Unit)?
 }
