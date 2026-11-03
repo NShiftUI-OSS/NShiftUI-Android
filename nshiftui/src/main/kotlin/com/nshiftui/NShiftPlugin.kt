@@ -1,6 +1,7 @@
 package com.nshiftui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import kotlin.reflect.KClass
 
 class NShiftRegisteredPluginView(
@@ -195,11 +196,13 @@ abstract class NShiftPlugin(
     fun children(transform: @Composable (NShiftPluginModel, NShiftPluginNode) -> Unit = { _, node ->
         NShiftNodeView(node = node, engine = requireEngineTree())
     }) {
-        val tree = requireEngineTree()
-        val parent = tree.node(renderID) ?: return
-        parent.children.forEach { child ->
-            androidx.compose.runtime.key(child.renderId.rawValue) {
-                transform(child.model, child)
+        CompositionLocalProvider(LocalNShiftPluginViewModel provides cascadedViewModel()) {
+            val tree = requireEngineTree()
+            val parent = tree.node(renderID) ?: return@CompositionLocalProvider
+            parent.children.forEach { child ->
+                androidx.compose.runtime.key(child.renderId.rawValue) {
+                    transform(child.model, child)
+                }
             }
         }
     }
@@ -211,12 +214,14 @@ abstract class NShiftPlugin(
             NShiftNodeView(node = node, engine = requireEngineTree())
         },
     ) {
-        val tree = requireEngineTree()
-        val parent = tree.node(renderID) ?: return
-        val nodes = parent.slotChildren[name].orEmpty()
-        nodes.forEach { child ->
-            androidx.compose.runtime.key(child.renderId.rawValue) {
-                transform(child.model, child)
+        CompositionLocalProvider(LocalNShiftPluginViewModel provides cascadedViewModel()) {
+            val tree = requireEngineTree()
+            val parent = tree.node(renderID) ?: return@CompositionLocalProvider
+            val nodes = parent.slotChildren[name].orEmpty()
+            nodes.forEach { child ->
+                androidx.compose.runtime.key(child.renderId.rawValue) {
+                    transform(child.model, child)
+                }
             }
         }
     }
@@ -257,6 +262,12 @@ abstract class NShiftPlugin(
     protected fun requireEngineTree(): NShiftEngineTree =
         engine as? NShiftEngineTree
             ?: error("Plugin children/slots require an NShiftEngineTree")
+
+    @Composable
+    private fun cascadedViewModel(): NShiftPluginViewModel? = when (this) {
+        is NShiftPluginContainer<*> -> containerViewModel
+        else -> LocalNShiftPluginViewModel.current
+    }
 }
 
 abstract class NShiftPluginWithMetadata<M : NShiftMetadata>(
@@ -274,12 +285,13 @@ abstract class NShiftPluginContainer<VM : NShiftPluginViewModel>(
     metadata: KClass<out NShiftMetadata>? = null,
     private val viewModelType: KClass<VM>,
 ) : NShiftPlugin(name, version, metadata) {
-    lateinit var viewModel: VM
+    lateinit var containerViewModel: VM
         protected set
 
     override fun onBind(): Boolean {
         val resolved = resolver.resolve(viewModelType) ?: return false
-        viewModel = resolved
+        containerViewModel = resolved
+        engine?.let { NShiftPluginViewModelCascade.install(resolved, it) }
         return true
     }
 }

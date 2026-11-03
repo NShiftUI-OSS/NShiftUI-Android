@@ -1,6 +1,26 @@
 package com.nshiftui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+
+val LocalNShiftPluginViewModel = staticCompositionLocalOf<NShiftPluginViewModel?> { null }
+
+val NShiftPlugin.viewModel: NShiftPluginViewModel?
+    @Composable get() = when (this) {
+        is NShiftPluginContainer<*> -> this.containerViewModel
+        else -> LocalNShiftPluginViewModel.current
+    }
+
+object NShiftPluginViewModelCascade {
+    private val storage = java.util.IdentityHashMap<NShiftEngine, NShiftPluginViewModel>()
+
+    fun install(viewModel: NShiftPluginViewModel, engine: NShiftEngine) {
+        storage[engine] = viewModel
+    }
+
+    fun viewModel(engine: NShiftEngine): NShiftPluginViewModel? = storage[engine]
+}
 
 class NShiftPluginScope(@PublishedApi internal val plugin: NShiftPlugin) {
     val model: NShiftPluginModel get() = plugin.model
