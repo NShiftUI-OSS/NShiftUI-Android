@@ -62,6 +62,7 @@ class NShiftKspTests : FunSpec({
                         trigger = NShiftTrigger("onTap"),
                     ),
                 ),
+                null,
             )
         }
     }

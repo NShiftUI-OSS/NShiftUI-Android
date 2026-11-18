@@ -49,6 +49,7 @@ class NShiftPluginScope(@PublishedApi internal val plugin: NShiftPlugin) {
 class NShiftEventScope(@PublishedApi internal val event: NShiftEvent) {
     val model: NShiftEventModel get() = event.model
     val resolver: NShiftDependencyResolver get() = event.resolver
+    val viewModel: NShiftPluginViewModel? get() = event.viewModel
 
     inline fun <reified T : NShiftMetadata> metadata(): T = event.metadata()
 }

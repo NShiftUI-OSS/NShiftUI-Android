@@ -10,10 +10,10 @@ class NShiftRegisteredPluginView(
 )
 
 class NShiftEventAction(
-    private val executeHandler: suspend (NShiftEventModel) -> Unit,
+    private val executeHandler: suspend (NShiftEventModel, NShiftPluginViewModel?) -> Unit,
 ) {
-    suspend fun execute(event: NShiftEventModel) {
-        executeHandler(event)
+    suspend fun execute(event: NShiftEventModel, viewModel: NShiftPluginViewModel?) {
+        executeHandler(event, viewModel)
     }
 }
 
@@ -48,18 +48,26 @@ class NShiftDependencyEventHandler(
     private val eventStore: NShiftEventStore,
     private val resolver: NShiftDependencyResolver,
 ) : NShiftEventHandler {
-    override suspend fun handle(trigger: NShiftTrigger, events: List<NShiftEventModel>) {
+    override suspend fun handle(
+        trigger: NShiftTrigger,
+        events: List<NShiftEventModel>,
+        viewModel: NShiftPluginViewModel?,
+    ) {
         for (event in eventStore.resolve(trigger, events)) {
-            runCatching { resolveAction(event)?.execute(event) }
+            runCatching { resolveAction(event)?.execute(event, viewModel) }
         }
     }
 
-    override suspend fun handleThrowing(trigger: NShiftTrigger, events: List<NShiftEventModel>) {
+    override suspend fun handleThrowing(
+        trigger: NShiftTrigger,
+        events: List<NShiftEventModel>,
+        viewModel: NShiftPluginViewModel?,
+    ) {
         for (event in eventStore.resolve(trigger, events)) {
             val action = resolveAction(event)
                 ?: throw NShiftEventHandlingError(event, NShiftEventHandlingFailureReason.ActionNotFound)
             try {
-                action.execute(event)
+                action.execute(event, viewModel)
             } catch (_: NShiftEventInitializationError) {
                 throw NShiftEventHandlingError(event, NShiftEventHandlingFailureReason.InitializationFailed)
             } catch (error: NShiftEventHandlingError) {
@@ -135,14 +143,14 @@ inline fun <reified P : NShiftPlugin> NShiftDependencyRegistering.registerPlugin
 fun NShiftDependencyRegistering.registerEvent(
     name: NShiftEventName,
     version: NShiftVersion,
-    factory: (NShiftEventModel, NShiftDependencyResolver) -> NShiftEvent?,
+    factory: (NShiftEventModel, NShiftDependencyResolver, NShiftPluginViewModel?) -> NShiftEvent?,
 ) {
     val registrationName = NShiftVersion.registrationName(name, version)
     NShiftRegisteredVersionCatalog.shared.registerEvent(name, version)
     val container = this as NShiftDependencyContainer
     register(NShiftEventAction::class, registrationName) {
-        NShiftEventAction { model ->
-            val event = factory(model, container) ?: throw NShiftEventInitializationError()
+        NShiftEventAction { model, viewModel ->
+            val event = factory(model, container, viewModel) ?: throw NShiftEventInitializationError()
             event.execute()
         }
     }
@@ -152,9 +160,9 @@ inline fun <reified E : NShiftEvent> NShiftDependencyRegistering.registerEvent()
     val constructor = E::class.java.getDeclaredConstructor()
     constructor.isAccessible = true
     val sample = constructor.newInstance()
-    registerEvent(sample.name, sample.version) { model, resolver ->
+    registerEvent(sample.name, sample.version) { model, resolver, viewModel ->
         val event = constructor.newInstance()
-        if (event.bind(model, resolver)) event else null
+        if (event.bind(model, resolver, viewModel)) event else null
     }
 }
 
@@ -341,6 +349,8 @@ abstract class NShiftEvent(
         protected set
     lateinit var resolver: NShiftDependencyResolver
         protected set
+    var viewModel: NShiftPluginViewModel? = null
+        protected set
     var metadataValue: NShiftMetadata? = null
         protected set
 
@@ -348,7 +358,11 @@ abstract class NShiftEvent(
 
     abstract suspend fun execute()
 
-    fun bind(model: NShiftEventModel, resolver: NShiftDependencyResolver): Boolean {
+    fun bind(
+        model: NShiftEventModel,
+        resolver: NShiftDependencyResolver,
+        viewModel: NShiftPluginViewModel? = null,
+    ): Boolean {
         if (metadataType != null) {
             val unwrapped = model.metadata?.unwrap(metadataType.java) ?: return false
             metadataValue = unwrapped
@@ -357,6 +371,7 @@ abstract class NShiftEvent(
         }
         this.model = model
         this.resolver = resolver
+        this.viewModel = viewModel
         return true
     }
 }

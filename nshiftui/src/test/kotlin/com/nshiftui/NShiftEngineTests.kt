@@ -7,9 +7,17 @@ import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.runTest
 
 private class NoopEventHandler : NShiftEventHandler {
-    override suspend fun handle(trigger: NShiftTrigger, events: List<NShiftEventModel>) {}
+    override suspend fun handle(
+        trigger: NShiftTrigger,
+        events: List<NShiftEventModel>,
+        viewModel: NShiftPluginViewModel?,
+    ) {}
 
-    override suspend fun handleThrowing(trigger: NShiftTrigger, events: List<NShiftEventModel>) {}
+    override suspend fun handleThrowing(
+        trigger: NShiftTrigger,
+        events: List<NShiftEventModel>,
+        viewModel: NShiftPluginViewModel?,
+    ) {}
 }
 
 private fun plugin(
@@ -101,11 +109,19 @@ class NShiftEngineTests : FunSpec({
     test("handle trigger uses event handler") {
         var seen = emptyList<String>()
         val handler = object : NShiftEventHandler {
-            override suspend fun handle(trigger: NShiftTrigger, events: List<NShiftEventModel>) {
+            override suspend fun handle(
+                trigger: NShiftTrigger,
+                events: List<NShiftEventModel>,
+                viewModel: NShiftPluginViewModel?,
+            ) {
                 seen = events.filter { it.trigger == trigger }.map { it.id }
             }
 
-            override suspend fun handleThrowing(trigger: NShiftTrigger, events: List<NShiftEventModel>) {}
+            override suspend fun handleThrowing(
+                trigger: NShiftTrigger,
+                events: List<NShiftEventModel>,
+                viewModel: NShiftPluginViewModel?,
+            ) {}
         }
         val root = plugin(
             name = "Root",

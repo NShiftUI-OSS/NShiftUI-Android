@@ -81,7 +81,7 @@ class NShiftPluginEventRegistrationTests : FunSpec({
             trigger = NShiftTrigger("onTap"),
         )
         runTest {
-            handler.handleThrowing(NShiftTrigger("onTap"), listOf(model))
+            handler.handleThrowing(NShiftTrigger("onTap"), listOf(model), null)
         }
     }
 

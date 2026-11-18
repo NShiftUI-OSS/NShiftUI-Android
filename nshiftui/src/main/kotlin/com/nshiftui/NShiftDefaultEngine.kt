@@ -40,7 +40,7 @@ open class NShiftDefaultEngine(
 
     override suspend fun handle(trigger: NShiftTrigger, pluginID: String) {
         val node = node(pluginID) ?: return
-        eventHandler.handle(trigger, node.model.events)
+        eventHandler.handle(trigger, node.model.events, pluginViewModel)
     }
 
     override fun replaceMetadata(pluginID: String, metadata: AnyNShiftMetadata?) {

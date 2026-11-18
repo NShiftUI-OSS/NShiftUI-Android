@@ -67,9 +67,17 @@ interface NShiftEventStore {
 }
 
 interface NShiftEventHandler {
-    suspend fun handle(trigger: NShiftTrigger, events: List<NShiftEventModel>)
+    suspend fun handle(
+        trigger: NShiftTrigger,
+        events: List<NShiftEventModel>,
+        viewModel: NShiftPluginViewModel?,
+    )
 
-    suspend fun handleThrowing(trigger: NShiftTrigger, events: List<NShiftEventModel>)
+    suspend fun handleThrowing(
+        trigger: NShiftTrigger,
+        events: List<NShiftEventModel>,
+        viewModel: NShiftPluginViewModel?,
+    )
 }
 
 data class NShiftEventHandlingError(
