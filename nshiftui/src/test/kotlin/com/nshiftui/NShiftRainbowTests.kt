@@ -76,16 +76,50 @@ class NShiftRainbowJSONTests : FunSpec({
         obj.containsKey("style") shouldBe false
     }
 
-    test("throws unsupported tagged value") {
+    test("reads every tagged language text and rejects placeholders") {
         val range = RainbowSourceRange(
             start = RainbowSourceLocation(0, 1, 1),
             end = RainbowSourceLocation(1, 1, 2),
         )
+        val samples = listOf(
+            EmbeddedLanguage.JSON to "{\"a\":1}",
+            EmbeddedLanguage.YAML to "a: 1",
+            EmbeddedLanguage.XML to "<a>1</a>",
+            EmbeddedLanguage.HTML to "<p>1</p>",
+            EmbeddedLanguage.MARKDOWN to "# 1",
+        )
+        for ((language, text) in samples) {
+            NShiftRainbowJSON.jsonValue(
+                RainbowValue.Tagged(language, RainbowTaggedBody.Text(text), range),
+            ) shouldBe text
+        }
         shouldThrow<NShiftRainbowCompileError.UnsupportedTaggedValue> {
             NShiftRainbowJSON.jsonValue(
-                RainbowValue.Tagged(EmbeddedLanguage.JSON, RainbowTaggedBody.Text("{}"), range),
+                RainbowValue.Tagged(EmbeddedLanguage.JSON, RainbowTaggedBody.Placeholder("Name"), range),
             )
         }.language shouldBe "JSON"
+    }
+
+    test("requires tagged JSON for a declared parameter") {
+        val range = RainbowSourceRange(
+            start = RainbowSourceLocation(0, 1, 1),
+            end = RainbowSourceLocation(1, 1, 2),
+        )
+        shouldThrow<NShiftRainbowCompileError.TaggedJSONRequired> {
+            NShiftRainbowJSON.dictionary(
+                listOf(RainbowParameter("body", RainbowValue.StringValue("{}"))),
+                setOf("body"),
+            )
+        }.name shouldBe "body"
+        NShiftRainbowJSON.dictionary(
+            listOf(
+                RainbowParameter(
+                    "body",
+                    RainbowValue.Tagged(EmbeddedLanguage.JSON, RainbowTaggedBody.Text("{\"a\":1}"), range),
+                ),
+            ),
+            setOf("body"),
+        )["body"] shouldBe "{\"a\":1}"
     }
 
     test("metadata decoder returns null for empty parameters") {

@@ -83,7 +83,7 @@ class NShiftRainbowCompiler(
         val slots = mutableMapOf<NShiftSlotName, MutableList<NShiftPluginModel>>()
         val events = mutableListOf<NShiftEventModel>()
         for (node in nodes) {
-            if (configuration.slotMarkers.contains(node.name)) {
+            if (isSlot(node.name)) {
                 val slotName = try {
                     NShiftSlotName(node.name)
                 } catch (_: NShiftSlotNameError) {
@@ -129,7 +129,7 @@ class NShiftRainbowCompiler(
                 nestedEvents.addAll(compileEvents(child, nestedTrigger, pins))
                 continue
             }
-            if (configuration.slotMarkers.contains(child.name)) {
+            if (isSlot(child.name)) {
                 val slotName = try {
                     NShiftSlotName(child.name)
                 } catch (_: NShiftSlotNameError) {
@@ -155,9 +155,14 @@ class NShiftRainbowCompiler(
     }
 
     private fun decodeMetadata(pluginName: String, parameters: List<RainbowParameter>): AnyNShiftMetadata? {
-        val decoder = configuration.metadataDecoders[pluginName] ?: return null
+        val decoder = configuration.metadataDecoders[pluginName]
+            ?: NShiftRainbowCatalog.decoder(pluginName)
+            ?: return null
         return decoder.decode(parameters)
     }
+
+    private fun isSlot(name: String): Boolean =
+        configuration.slotMarkers.contains(name) || NShiftRainbowCatalog.isSlot(name)
 
     private fun decodeStyle(parameters: List<RainbowParameter>): NShiftPluginStyle {
         val styleParameter = parameters.firstOrNull { it.name == "style" } ?: return NShiftPluginStyle()

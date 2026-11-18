@@ -125,6 +125,11 @@ inline fun <reified P : NShiftPlugin> NShiftDependencyRegistering.registerPlugin
     val constructor = P::class.java.getDeclaredConstructor()
     constructor.isAccessible = true
     val sample = constructor.newInstance()
+    NShiftRainbowCatalog.adopt(
+        sample.name.rawValue,
+        sample.metadataClass,
+        P::class.java.getAnnotation(com.nshiftui.macro.NShiftPlugin::class.java)?.slots,
+    )
     registerPlugin(
         name = sample.name,
         version = sample.version,
@@ -160,6 +165,11 @@ inline fun <reified E : NShiftEvent> NShiftDependencyRegistering.registerEvent()
     val constructor = E::class.java.getDeclaredConstructor()
     constructor.isAccessible = true
     val sample = constructor.newInstance()
+    NShiftRainbowCatalog.adopt(
+        sample.name.rawValue,
+        sample.metadataClass,
+        E::class.java.getAnnotation(com.nshiftui.macro.NShiftEvent::class.java)?.slots,
+    )
     registerEvent(sample.name, sample.version) { model, resolver, viewModel ->
         val event = constructor.newInstance()
         if (event.bind(model, resolver, viewModel)) event else null
@@ -203,6 +213,8 @@ abstract class NShiftPlugin(
         protected set
     var metadataValue: NShiftMetadata? = null
         protected set
+    val metadataClass: KClass<out NShiftMetadata>?
+        get() = metadataType
 
     inline fun <reified T : NShiftMetadata> metadata(): T = metadataValue as T
 
@@ -353,6 +365,8 @@ abstract class NShiftEvent(
         protected set
     var metadataValue: NShiftMetadata? = null
         protected set
+    val metadataClass: KClass<out NShiftMetadata>?
+        get() = metadataType
 
     inline fun <reified T : NShiftMetadata> metadata(): T = metadataValue as T
 

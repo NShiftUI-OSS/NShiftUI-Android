@@ -1,6 +1,8 @@
 package com.nshiftui
 
+import com.nshiftui.rainbowparser.ast.EmbeddedLanguage
 import com.nshiftui.rainbowparser.ast.RainbowParameter
+import com.nshiftui.rainbowparser.ast.RainbowTaggedBody
 import com.nshiftui.rainbowparser.ast.RainbowValue
 
 sealed class NShiftRainbowCompileError : Exception() {
@@ -12,6 +14,7 @@ sealed class NShiftRainbowCompileError : Exception() {
     data class InvalidVersion(val version: String) : NShiftRainbowCompileError()
     data class MissingVersion(val name: String) : NShiftRainbowCompileError()
     data class MetadataDecodingFailed(val plugin: String, val failure: String) : NShiftRainbowCompileError()
+    data class TaggedJSONRequired(val name: String) : NShiftRainbowCompileError()
     data class UnsupportedTaggedValue(val language: String) : NShiftRainbowCompileError()
 
     override val message: String
@@ -26,15 +29,28 @@ sealed class NShiftRainbowCompileError : Exception() {
                 is MissingVersion ->
                     "Missing version pin for $name (add use $name@x.y.z or register in catalog)"
                 is MetadataDecodingFailed -> "Failed to decode metadata for $plugin: $failure"
+                is TaggedJSONRequired -> "Parameter $name must be a @JSON(...) value"
                 is UnsupportedTaggedValue -> "Unsupported tagged value @$language in Rainbow parameters"
             }
 }
 
 object NShiftRainbowJSON {
-    fun dictionary(from: List<RainbowParameter>): Map<String, Any?> {
+    fun dictionary(
+        from: List<RainbowParameter>,
+        jsonTaggedParameters: Set<String> = emptySet(),
+    ): Map<String, Any?> {
         val result = linkedMapOf<String, Any?>()
         for (parameter in from) {
             if (parameter.name == "id" || parameter.name == "style") {
+                continue
+            }
+            if (parameter.name in jsonTaggedParameters) {
+                val tagged = parameter.value as? RainbowValue.Tagged
+                val text = (tagged?.body as? RainbowTaggedBody.Text)?.value
+                if (tagged?.language != EmbeddedLanguage.JSON || text == null) {
+                    throw NShiftRainbowCompileError.TaggedJSONRequired(parameter.name)
+                }
+                result[parameter.name] = text
                 continue
             }
             result[parameter.name] = jsonValue(parameter.value)
@@ -64,7 +80,8 @@ object NShiftRainbowJSON {
                 objectValue
             }
             is RainbowValue.Tagged ->
-                throw NShiftRainbowCompileError.UnsupportedTaggedValue(value.language.rawValue)
+                (value.body as? RainbowTaggedBody.Text)?.value
+                    ?: throw NShiftRainbowCompileError.UnsupportedTaggedValue(value.language.rawValue)
         }
 
     fun <T> decode(from: List<RainbowParameter>, mapper: (Map<String, Any?>) -> T): T =
@@ -79,6 +96,7 @@ interface NShiftRainbowMetadataDecoding {
 
 class NShiftRainbowMapMetadataDecoder(
     override val pluginName: String,
+    private val jsonTaggedParameters: Set<String> = emptySet(),
     private val mapper: (Map<String, Any?>) -> NShiftMetadata,
 ) : NShiftRainbowMetadataDecoding {
     override fun decode(parameters: List<RainbowParameter>): AnyNShiftMetadata? {
@@ -86,7 +104,9 @@ class NShiftRainbowMapMetadataDecoder(
             return null
         }
         return try {
-            AnyNShiftMetadata(mapper(NShiftRainbowJSON.dictionary(parameters)))
+            AnyNShiftMetadata(mapper(NShiftRainbowJSON.dictionary(parameters, jsonTaggedParameters)))
+        } catch (error: NShiftRainbowCompileError) {
+            throw error
         } catch (error: Throwable) {
             throw NShiftRainbowCompileError.MetadataDecodingFailed(pluginName, error.message ?: error.toString())
         }

@@ -50,6 +50,7 @@ class NShiftConfig private constructor() {
         eventHandler = null
         eventStore = null
         isStarted = false
+        NShiftRainbowCatalog.resetForTesting()
         NShiftPluginContainerRegistry.shared.resetForTesting()
         NShiftPluginContainerCatalog.shared.resetForTesting()
         NShiftRegisteredVersionCatalog.shared.resetForTesting()

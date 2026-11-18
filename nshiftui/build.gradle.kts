@@ -58,6 +58,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.runtime:runtime")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
     testImplementation("io.kotest:kotest-runner-junit5:6.2.4")
     testImplementation("io.kotest:kotest-assertions-core:6.2.4")
