@@ -157,7 +157,7 @@ class NShiftRainbowCompilerTests : FunSpec({
             use Scroll@1.0.0
 
             Screen(backgroundColor: "#FFFFFF") {
-              Scroll() {
+              Scroll {
                 Text(text: "Hello", size: 16)
               }
             }
@@ -213,7 +213,7 @@ class NShiftRainbowCompilerTests : FunSpec({
             use VerticalStack@1.0.0
             use Text@1.0.0
 
-            VerticalStack() {
+            VerticalStack {
               Text(text: "A", size: 12)
             }
             .style(spacing: 8)
@@ -468,7 +468,7 @@ class NShiftRainbowCompilerTests : FunSpec({
             use Screen@1.0.0
             use Ontap@1.0.0
 
-            Screen() {
+            Screen {
               Ontap()
             }
             """.trimIndent(),
