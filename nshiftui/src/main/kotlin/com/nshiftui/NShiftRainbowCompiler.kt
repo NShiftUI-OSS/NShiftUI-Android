@@ -58,14 +58,19 @@ class NShiftRainbowCompiler(
         val version = resolveVersion(node.name, pins, isEvent = false)
         val children = node.children.map { compilePlugin(it, pins) }
         val slots = compileSlots(node.slots, pins)
+            .mapValues { (_, models) -> models.toMutableList() }
+            .toMutableMap()
         val events = compileModifierEvents(node.events, pins)
-        val metadata = decodeMetadata(node.name, node.parameters)
+        val decodedMetadata = decodeMetadata(node.name, node.parameters, pins)
+        decodedMetadata.slots.forEach { (slot, models) ->
+            slots.getOrPut(slot) { mutableListOf() }.addAll(models)
+        }
         val style = decodeStyle(node.style)
         return NShiftPluginModel(
             id = node.id,
             name = pluginName,
             version = version,
-            metadata = metadata,
+            metadata = decodedMetadata.metadata,
             style = style,
             children = children,
             slots = slots,
@@ -116,23 +121,47 @@ class NShiftRainbowCompiler(
             throw NShiftRainbowCompileError.InvalidEventName(node.name)
         }
         val version = resolveVersion(node.name, pins, isEvent = true)
-        val metadata = decodeMetadata(node.name, node.parameters)
+        val metadata = decodeMetadata(node.name, node.parameters, pins)
         return NShiftEventModel(
             id = node.id ?: "",
             name = eventName,
             version = version,
-            metadata = metadata,
+            metadata = metadata.metadata,
             trigger = trigger,
             slots = compileSlots(node.slots, pins),
             events = compileModifierEvents(node.events, pins),
         )
     }
 
-    private fun decodeMetadata(pluginName: String, parameters: List<RainbowParameter>): AnyNShiftMetadata? {
+    private fun decodeMetadata(
+        pluginName: String,
+        parameters: List<RainbowParameter>,
+        pins: NShiftDSLVersionPins,
+    ): NShiftRainbowMetadataDecodeResult {
         val decoder = configuration.metadataDecoders[pluginName]
             ?: NShiftRainbowCatalog.decoder(pluginName)
-            ?: return null
-        return decoder.decode(parameters)
+            ?: return NShiftRainbowMetadataDecodeResult(metadata = null)
+        return decoder.decode(
+            parameters = parameters,
+            context = NShiftRainbowMetadataDecodingContext { parameterName ->
+                val plugins = pluginNodes(parameterName, parameters)
+                plugins.map { compilePlugin(it, pins) }
+            },
+        )
+    }
+
+    private fun pluginNodes(
+        path: String,
+        parameters: List<RainbowParameter>,
+    ): List<RainbowNode> {
+        val components = path.split('.')
+        val first = components.firstOrNull() ?: return emptyList()
+        var value = parameters.firstOrNull { it.name == first }?.value ?: return emptyList()
+        for (component in components.drop(1)) {
+            val entries = (value as? RainbowValue.ObjectValue)?.entries ?: return emptyList()
+            value = entries.firstOrNull { it.key == component }?.value ?: return emptyList()
+        }
+        return (value as? RainbowValue.Plugins)?.plugins.orEmpty()
     }
 
     private fun decodeStyle(parameters: List<RainbowParameter>): NShiftPluginStyle {

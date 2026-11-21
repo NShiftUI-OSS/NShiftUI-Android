@@ -50,6 +50,16 @@ object NShiftRainbowCatalog {
         private val metadata: KClass<out NShiftMetadata>,
     ) : NShiftRainbowMetadataDecoding {
         override fun decode(parameters: List<RainbowParameter>): AnyNShiftMetadata? {
+            return decode(
+                parameters = parameters,
+                context = NShiftRainbowMetadataDecodingContext { emptyList() },
+            ).metadata
+        }
+
+        override fun decode(
+            parameters: List<RainbowParameter>,
+            context: NShiftRainbowMetadataDecodingContext,
+        ): NShiftRainbowMetadataDecodeResult {
             return try {
                 val tagged = metadata.java.getAnnotation(NShiftJSONTagged::class.java)
                     ?.parameters
@@ -61,9 +71,17 @@ object NShiftRainbowCatalog {
                     (metadata as KClass<NShiftMetadata>).serializer(),
                     element,
                 )
-                AnyNShiftMetadata(value)
+                if (value is NShiftRainbowPluginMetadata) {
+                    value.decodeRainbowMetadata(context)
+                } else {
+                    NShiftRainbowMetadataDecodeResult(AnyNShiftMetadata(value))
+                }
             } catch (error: Throwable) {
-                if (parameters.isEmpty()) null else throw error
+                if (parameters.isEmpty()) {
+                    NShiftRainbowMetadataDecodeResult(metadata = null)
+                } else {
+                    throw error
+                }
             }
         }
     }

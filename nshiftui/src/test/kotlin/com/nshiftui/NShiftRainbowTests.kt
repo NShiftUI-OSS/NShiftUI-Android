@@ -18,6 +18,27 @@ import io.kotest.matchers.shouldBe
 
 private data class SampleTextMetadata(val text: String, val size: Double) : NShiftMetadata
 
+private data class SampleScrollMetadata(
+    val isLazy: Boolean,
+) : NShiftMetadata, NShiftRainbowPluginMetadata {
+    override fun decodeRainbowMetadata(
+        context: NShiftRainbowMetadataDecodingContext,
+    ): NShiftRainbowMetadataDecodeResult {
+        val slots = buildMap {
+            context.compilePlugins("scroll.header")
+                .takeIf { it.isNotEmpty() }
+                ?.let { put("ScrollHeader", it) }
+            context.compilePlugins("scroll.footer")
+                .takeIf { it.isNotEmpty() }
+                ?.let { put("ScrollFooter", it) }
+        }
+        return NShiftRainbowMetadataDecodeResult(
+            metadata = AnyNShiftMetadata(this),
+            slots = slots.mapKeys { NShiftSlotName(it.key) },
+        )
+    }
+}
+
 private fun defaultCompiler(
     catalog: NShiftRegisteredVersionCatalog = NShiftRegisteredVersionCatalog.forTesting(),
     defaultVersion: NShiftVersion? = null,
@@ -149,6 +170,47 @@ class NShiftRainbowJSONTests : FunSpec({
 })
 
 class NShiftRainbowCompilerTests : FunSpec({
+    test("compiles plugin metadata values into engine slots") {
+        val scrollDecoder = NShiftRainbowMapMetadataDecoder("Screen") { map ->
+            val scroll = map["scroll"] as Map<*, *>
+            SampleScrollMetadata(
+                isLazy = (scroll["isLazy"] as Boolean),
+            )
+        }
+        val catalog = NShiftRegisteredVersionCatalog.forTesting()
+        val configuration = NShiftRainbowCompileConfiguration(
+            defaultVersion = NShiftVersion(1, 0, 0),
+            catalog = catalog,
+        )
+            .registeringMetadataDecoder(scrollDecoder)
+            .registeringMetadataDecoder(textDecoder)
+        val model = NShiftRainbowCompiler(configuration).compile(
+            """
+            use Screen@1.0.0
+            use Text@1.0.0
+
+            Screen(
+              scroll: (
+                isLazy: true,
+                header: {
+                  Text(text: "Header", size: 16)
+                },
+                footer: {
+                  Text(text: "Footer", size: 16)
+                }
+              )
+            ) {
+              Text(text: "Body", size: 16)
+            }
+            """.trimIndent(),
+        )
+
+        model.metadata?.unwrap<SampleScrollMetadata>()?.isLazy shouldBe true
+        model.slots[NShiftSlotName("ScrollHeader")]?.map { it.name.rawValue } shouldBe listOf("Text")
+        model.slots[NShiftSlotName("ScrollFooter")]?.map { it.name.rawValue } shouldBe listOf("Text")
+        model.children.map { it.name.rawValue } shouldBe listOf("Text")
+    }
+
     test("compiles slots children and metadata") {
         val source = """
             use Screen@1.0.0

@@ -5,6 +5,21 @@ import com.nshiftui.rainbowparser.ast.RainbowParameter
 import com.nshiftui.rainbowparser.ast.RainbowTaggedBody
 import com.nshiftui.rainbowparser.ast.RainbowValue
 
+data class NShiftRainbowMetadataDecodingContext(
+    val compilePlugins: (String) -> List<NShiftPluginModel>,
+)
+
+data class NShiftRainbowMetadataDecodeResult(
+    val metadata: AnyNShiftMetadata?,
+    val slots: Map<NShiftSlotName, List<NShiftPluginModel>> = emptyMap(),
+)
+
+interface NShiftRainbowPluginMetadata : NShiftMetadata {
+    fun decodeRainbowMetadata(
+        context: NShiftRainbowMetadataDecodingContext,
+    ): NShiftRainbowMetadataDecodeResult
+}
+
 sealed class NShiftRainbowCompileError : Exception() {
     data object EmptyDocument : NShiftRainbowCompileError()
     data class InvalidPluginName(val name: String) : NShiftRainbowCompileError()
@@ -75,6 +90,9 @@ object NShiftRainbowJSON {
             is RainbowValue.ObjectValue -> {
                 val objectValue = linkedMapOf<String, Any?>()
                 for (entry in value.entries) {
+                    if (entry.value is RainbowValue.Plugins) {
+                        continue
+                    }
                     objectValue[entry.key] = jsonValue(entry.value)
                 }
                 objectValue
@@ -94,6 +112,12 @@ interface NShiftRainbowMetadataDecoding {
     val pluginName: String
 
     fun decode(parameters: List<RainbowParameter>): AnyNShiftMetadata?
+
+    fun decode(
+        parameters: List<RainbowParameter>,
+        context: NShiftRainbowMetadataDecodingContext,
+    ): NShiftRainbowMetadataDecodeResult =
+        NShiftRainbowMetadataDecodeResult(decode(parameters))
 }
 
 class NShiftRainbowMapMetadataDecoder(
@@ -102,11 +126,27 @@ class NShiftRainbowMapMetadataDecoder(
     private val mapper: (Map<String, Any?>) -> NShiftMetadata,
 ) : NShiftRainbowMetadataDecoding {
     override fun decode(parameters: List<RainbowParameter>): AnyNShiftMetadata? {
+        return decode(
+            parameters = parameters,
+            context = NShiftRainbowMetadataDecodingContext { emptyList() },
+        ).metadata
+    }
+
+    override fun decode(
+        parameters: List<RainbowParameter>,
+        context: NShiftRainbowMetadataDecodingContext,
+    ): NShiftRainbowMetadataDecodeResult {
         if (parameters.isEmpty()) {
-            return null
+            return NShiftRainbowMetadataDecodeResult(metadata = null)
         }
         return try {
-            AnyNShiftMetadata(mapper(NShiftRainbowJSON.dictionary(parameters, jsonTaggedParameters)))
+            val value = mapper(NShiftRainbowJSON.dictionary(parameters, jsonTaggedParameters))
+            if (value is NShiftRainbowPluginMetadata) {
+                return value.decodeRainbowMetadata(context)
+            }
+            NShiftRainbowMetadataDecodeResult(
+                metadata = AnyNShiftMetadata(value),
+            )
         } catch (error: NShiftRainbowCompileError) {
             throw error
         } catch (error: Throwable) {
