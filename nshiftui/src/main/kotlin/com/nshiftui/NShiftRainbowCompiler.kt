@@ -6,8 +6,6 @@ import com.nshiftui.rainbowparser.ast.RainbowNode
 import com.nshiftui.rainbowparser.ast.RainbowParameter
 import com.nshiftui.rainbowparser.ast.RainbowUseDeclaration
 import com.nshiftui.rainbowparser.ast.RainbowValue
-import java.util.UUID
-
 data class NShiftRainbowCompileConfiguration(
     val slotMarkers: Set<String> = setOf("NavLeading", "NavCenter", "NavTrailing"),
     val defaultVersion: NShiftVersion? = null,
@@ -56,59 +54,54 @@ class NShiftRainbowCompiler(
             throw NShiftRainbowCompileError.InvalidPluginName(node.name)
         }
         val version = resolveVersion(node.name, pins, isEvent = false)
-        val partitioned = partitionChildren(node.children, pins)
+        val children = node.children.map { compilePlugin(it, pins) }
+        val slots = compileSlots(node.slots, pins)
+        val events = compileModifierEvents(node.events, pins)
         val metadata = decodeMetadata(node.name, node.parameters)
-        val id = stringParameter("id", node.parameters)
-        val style = decodeStyle(node.parameters)
+        val style = decodeStyle(node.style)
         return NShiftPluginModel(
-            id = id,
+            id = node.id,
             name = pluginName,
             version = version,
             metadata = metadata,
             style = style,
-            children = partitioned.children,
-            slots = partitioned.slots,
-            events = partitioned.events,
+            children = children,
+            slots = slots,
+            events = events,
         )
     }
 
-    private data class Partitioned(
-        val children: List<NShiftPluginModel>,
-        val slots: Map<NShiftSlotName, List<NShiftPluginModel>>,
-        val events: List<NShiftEventModel>,
-    )
-
-    private fun partitionChildren(nodes: List<RainbowNode>, pins: NShiftDSLVersionPins): Partitioned {
-        val children = mutableListOf<NShiftPluginModel>()
-        val slots = mutableMapOf<NShiftSlotName, MutableList<NShiftPluginModel>>()
-        val events = mutableListOf<NShiftEventModel>()
-        for (node in nodes) {
-            if (isSlot(node.name)) {
-                val slotName = try {
-                    NShiftSlotName(node.name)
-                } catch (_: NShiftSlotNameError) {
-                    throw NShiftRainbowCompileError.InvalidSlotName(node.name)
-                }
-                val compiled = node.children.map { compilePlugin(it, pins) }
-                slots.getOrPut(slotName) { mutableListOf() }.addAll(compiled)
-                continue
+    private fun compileSlots(
+        slots: List<com.nshiftui.rainbowparser.ast.RainbowSlot>,
+        pins: NShiftDSLVersionPins,
+    ): Map<NShiftSlotName, List<NShiftPluginModel>> {
+        val compiled = mutableMapOf<NShiftSlotName, MutableList<NShiftPluginModel>>()
+        for (slot in slots) {
+            val slotName = try {
+                NShiftSlotName(slot.name)
+            } catch (_: NShiftSlotNameError) {
+                throw NShiftRainbowCompileError.InvalidSlotName(slot.name)
             }
-            val trigger = triggerFrom(node.name)
-            if (trigger != null) {
-                events.addAll(compileEvents(node, trigger, pins))
-                continue
-            }
-            children.add(compilePlugin(node, pins))
+            val plugins = slot.plugins.map { compilePlugin(it, pins) }
+            compiled.getOrPut(slotName) { mutableListOf() }.addAll(plugins)
         }
-        return Partitioned(children, slots, events)
+        return compiled
     }
 
-    private fun compileEvents(
-        triggerNode: RainbowNode,
-        trigger: NShiftTrigger,
+    private fun compileModifierEvents(
+        triggers: List<com.nshiftui.rainbowparser.ast.RainbowTrigger>,
         pins: NShiftDSLVersionPins,
-    ): List<NShiftEventModel> =
-        triggerNode.children.map { compileEvent(it, trigger, pins) }
+    ): List<NShiftEventModel> {
+        val events = mutableListOf<NShiftEventModel>()
+        for (triggerNode in triggers) {
+            val trigger = triggerFrom(triggerNode.name)
+                ?: throw NShiftRainbowCompileError.InvalidTriggerName(triggerNode.name)
+            for (eventNode in triggerNode.events) {
+                events.add(compileEvent(eventNode, trigger, pins))
+            }
+        }
+        return events
+    }
 
     private fun compileEvent(
         node: RainbowNode,
@@ -121,36 +114,15 @@ class NShiftRainbowCompiler(
             throw NShiftRainbowCompileError.InvalidEventName(node.name)
         }
         val version = resolveVersion(node.name, pins, isEvent = true)
-        val nestedEvents = mutableListOf<NShiftEventModel>()
-        val slots = mutableMapOf<NShiftSlotName, MutableList<NShiftPluginModel>>()
-        for (child in node.children) {
-            val nestedTrigger = triggerFrom(child.name)
-            if (nestedTrigger != null) {
-                nestedEvents.addAll(compileEvents(child, nestedTrigger, pins))
-                continue
-            }
-            if (isSlot(child.name)) {
-                val slotName = try {
-                    NShiftSlotName(child.name)
-                } catch (_: NShiftSlotNameError) {
-                    throw NShiftRainbowCompileError.InvalidSlotName(child.name)
-                }
-                val compiled = child.children.map { compilePlugin(it, pins) }
-                slots.getOrPut(slotName) { mutableListOf() }.addAll(compiled)
-                continue
-            }
-            nestedEvents.add(compileEvent(child, trigger, pins))
-        }
         val metadata = decodeMetadata(node.name, node.parameters)
-        val id = stringParameter("id", node.parameters) ?: UUID.randomUUID().toString()
         return NShiftEventModel(
-            id = id,
+            id = node.id ?: "",
             name = eventName,
             version = version,
             metadata = metadata,
             trigger = trigger,
-            slots = slots,
-            events = nestedEvents,
+            slots = compileSlots(node.slots, pins),
+            events = compileModifierEvents(node.events, pins),
         )
     }
 
@@ -161,23 +133,27 @@ class NShiftRainbowCompiler(
         return decoder.decode(parameters)
     }
 
-    private fun isSlot(name: String): Boolean =
-        configuration.slotMarkers.contains(name) || NShiftRainbowCatalog.isSlot(name)
-
     private fun decodeStyle(parameters: List<RainbowParameter>): NShiftPluginStyle {
-        val styleParameter = parameters.firstOrNull { it.name == "style" } ?: return NShiftPluginStyle()
-        val entries = (styleParameter.value as? RainbowValue.ObjectValue)?.entries ?: return NShiftPluginStyle()
         var spacing = 0.0
-        for (entry in entries) {
-            if (entry.key == "spacing") {
-                spacing = when (val value = entry.value) {
-                    is RainbowValue.IntValue -> value.value.toDouble()
-                    is RainbowValue.DoubleValue -> value.value
-                    else -> spacing
+        var alignment = NShiftPluginAlignment.Center
+        for (parameter in parameters) {
+            when (parameter.name) {
+                "spacing" -> {
+                    spacing = when (val value = parameter.value) {
+                        is RainbowValue.IntValue -> value.value.toDouble()
+                        is RainbowValue.DoubleValue -> value.value
+                        else -> spacing
+                    }
+                }
+                "alignment" -> {
+                    val name = (parameter.value as? RainbowValue.Identifier)?.value?.removePrefix(".")
+                    alignment = NShiftPluginAlignment.entries.firstOrNull { entry ->
+                        entry.name.replaceFirstChar { it.lowercase() } == name
+                    } ?: alignment
                 }
             }
         }
-        return NShiftPluginStyle(spacing = spacing)
+        return NShiftPluginStyle(alignment = alignment, spacing = spacing)
     }
 
     private fun resolveVersion(name: String, pins: NShiftDSLVersionPins, isEvent: Boolean): NShiftVersion {
@@ -213,10 +189,5 @@ class NShiftRainbowCompiler(
         } catch (_: NShiftTriggerError) {
             null
         }
-    }
-
-    private fun stringParameter(name: String, parameters: List<RainbowParameter>): String? {
-        val parameter = parameters.firstOrNull { it.name == name } ?: return null
-        return (parameter.value as? RainbowValue.StringValue)?.value
     }
 }

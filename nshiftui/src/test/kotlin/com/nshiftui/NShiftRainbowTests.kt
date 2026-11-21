@@ -76,6 +76,26 @@ class NShiftRainbowJSONTests : FunSpec({
         obj.containsKey("style") shouldBe false
     }
 
+    test("keeps a string style and drops a layout style object") {
+        val text = NShiftRainbowJSON.dictionary(
+            listOf(
+                RainbowParameter("text", RainbowValue.StringValue("Entrada")),
+                RainbowParameter("style", RainbowValue.StringValue("xl")),
+            ),
+        )
+        text["text"] shouldBe "Entrada"
+        text["style"] shouldBe "xl"
+
+        val layout = NShiftRainbowJSON.dictionary(
+            listOf(
+                RainbowParameter("style", RainbowValue.ObjectValue(emptyList())),
+                RainbowParameter("text", RainbowValue.StringValue("Entrada")),
+            ),
+        )
+        layout.containsKey("style") shouldBe false
+        layout["text"] shouldBe "Entrada"
+    }
+
     test("reads every tagged language text and rejects placeholders") {
         val range = RainbowSourceRange(
             start = RainbowSourceLocation(0, 1, 1),
@@ -136,14 +156,16 @@ class NShiftRainbowCompilerTests : FunSpec({
             use Scroll@1.0.0
 
             Screen(backgroundColor: "#FFFFFF") {
+              Scroll() {
+                Text(text: "Hello", size: 16)
+              }
+            }
+            .slots {
               NavLeading {
                 Icon(name: .back, size: 22)
               }
               NavTrailing {
                 Icon(name: .settings, size: 22)
-              }
-              Scroll {
-                Text(text: "Hello", size: 16)
               }
             }
         """.trimIndent()
@@ -171,7 +193,8 @@ class NShiftRainbowCompilerTests : FunSpec({
             use Button@1.0.0
             use Navigate@1.0.0
 
-            Button(title: "Go") {
+            Button(title: "Go")
+            .events {
               OnTap {
                 Navigate(to: "Home")
               }
@@ -189,9 +212,10 @@ class NShiftRainbowCompilerTests : FunSpec({
             use VerticalStack@1.0.0
             use Text@1.0.0
 
-            VerticalStack(style: (spacing: 8)) {
+            VerticalStack() {
               Text(text: "A", size: 12)
             }
+            .style(spacing: 8)
         """.trimIndent()
         val model = defaultCompiler(defaultVersion = NShiftVersion(1, 0, 0)).compile(source)
         model.style.spacing shouldBe 8.0
@@ -235,7 +259,8 @@ class NShiftRainbowCompilerTests : FunSpec({
                 """
                 use Button@1.0.0
 
-                Button() {
+                Button()
+                .events {
                   OnTap {
                     show_toast()
                   }
@@ -255,7 +280,8 @@ class NShiftRainbowCompilerTests : FunSpec({
                 use Screen@1.0.0
                 use Icon@1.0.0
 
-                Screen() {
+                Screen()
+                .slots {
                   leading {
                     Icon()
                   }
@@ -285,7 +311,8 @@ class NShiftRainbowCompilerTests : FunSpec({
                 """
                 use Button@1.0.0
 
-                Button() {
+                Button()
+                .events {
                   OnTap {
                     ShowToast()
                   }
@@ -309,7 +336,8 @@ class NShiftRainbowCompilerTests : FunSpec({
         catalog.registerEvent("ShowToast", "3.0.0")
         val model = defaultCompiler(catalog = catalog).compile(
             """
-            Button() {
+            Button()
+            .events {
               OnTap {
                 ShowToast()
               }
@@ -350,14 +378,16 @@ class NShiftRainbowCompilerTests : FunSpec({
             """
             use Screen@1.0.0
 
-            Screen(id: "home")
+            Screen()
+            .id("home")
             """.trimIndent(),
         ).id shouldBe "home"
         defaultCompiler().compile(
             """
             use VerticalStack@1.0.0
 
-            VerticalStack(style: (spacing: 8.5))
+            VerticalStack()
+            .style(spacing: 8.5)
             """.trimIndent(),
         ).style.spacing shouldBe 8.5
         defaultCompiler().compile(
@@ -370,15 +400,18 @@ class NShiftRainbowCompilerTests : FunSpec({
     }
 
     test("compiles nested triggers event slots and multiple events") {
-        val nested = defaultCompiler(defaultVersion = NShiftVersion(1, 0, 0)).compile(
+        shouldThrow<com.nshiftui.rainbowparser.diagnostics.RainbowParseError> {
+            defaultCompiler(defaultVersion = NShiftVersion(1, 0, 0)).compile(
             """
             use Button@1.0.0
             use Navigate@1.0.0
             use Track@1.0.0
 
-            Button() {
+            Button()
+            .events {
               OnTap {
-                Navigate() {
+                Navigate()
+                .events {
                   OnAppear {
                     Track()
                   }
@@ -386,21 +419,20 @@ class NShiftRainbowCompilerTests : FunSpec({
               }
             }
             """.trimIndent(),
-        )
-        nested.events.single().name.rawValue shouldBe "Navigate"
-        nested.events.single().trigger.rawValue shouldBe "onTap"
-        nested.events.single().events.single().name.rawValue shouldBe "Track"
-        nested.events.single().events.single().trigger.rawValue shouldBe "onAppear"
-
-        val withSlot = defaultCompiler(defaultVersion = NShiftVersion(1, 0, 0)).compile(
+            )
+        }
+        shouldThrow<com.nshiftui.rainbowparser.diagnostics.RainbowParseError> {
+            defaultCompiler(defaultVersion = NShiftVersion(1, 0, 0)).compile(
             """
             use Button@1.0.0
             use Navigate@1.0.0
             use Icon@1.0.0
 
-            Button() {
+            Button()
+            .events {
               OnTap {
-                Navigate() {
+                Navigate()
+                .slots {
                   NavLeading {
                     Icon()
                   }
@@ -408,8 +440,8 @@ class NShiftRainbowCompilerTests : FunSpec({
               }
             }
             """.trimIndent(),
-        )
-        withSlot.events.single().slots[NShiftSlotName("NavLeading")]?.first()?.name?.rawValue shouldBe "Icon"
+            )
+        }
 
         val many = defaultCompiler(defaultVersion = NShiftVersion(1, 0, 0)).compile(
             """
@@ -417,7 +449,8 @@ class NShiftRainbowCompilerTests : FunSpec({
             use Navigate@1.0.0
             use ShowToast@1.0.0
 
-            Button() {
+            Button()
+            .events {
               OnTap {
                 Navigate()
                 ShowToast()

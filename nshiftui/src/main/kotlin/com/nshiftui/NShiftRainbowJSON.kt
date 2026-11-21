@@ -41,7 +41,14 @@ object NShiftRainbowJSON {
     ): Map<String, Any?> {
         val result = linkedMapOf<String, Any?>()
         for (parameter in from) {
-            if (parameter.name == "id" || parameter.name == "style") {
+            if (parameter.value is RainbowValue.Plugins) {
+                continue
+            }
+            if (parameter.name == "id") {
+                continue
+            }
+            // Object style is layout spacing. A string style is metadata, such as Text size.
+            if (parameter.name == "style" && parameter.value is RainbowValue.ObjectValue) {
                 continue
             }
             if (parameter.name in jsonTaggedParameters) {
@@ -82,6 +89,8 @@ object NShiftRainbowJSON {
             is RainbowValue.Tagged ->
                 (value.body as? RainbowTaggedBody.Text)?.value
                     ?: throw NShiftRainbowCompileError.UnsupportedTaggedValue(value.language.rawValue)
+            is RainbowValue.Plugins ->
+                throw NShiftRainbowCompileError.UnsupportedTaggedValue("plugins")
         }
 
     fun <T> decode(from: List<RainbowParameter>, mapper: (Map<String, Any?>) -> T): T =
