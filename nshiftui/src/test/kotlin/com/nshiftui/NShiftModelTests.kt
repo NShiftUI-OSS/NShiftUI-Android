@@ -8,12 +8,12 @@ class NShiftPluginStyleTests : FunSpec({
     test("defaults") {
         val style = NShiftPluginStyle()
         style.frame shouldBe NShiftPluginFrame()
-        style.alignment shouldBe NShiftPluginAlignment.Center
-        style.spacing shouldBe 0.0
+        style.offset shouldBe NShiftPluginOffset.zero
+        style.background shouldBe null
     }
 
-    test("stores spacing") {
-        NShiftPluginStyle(spacing = 16.0).spacing shouldBe 16.0
+    test("stores offset") {
+        NShiftPluginStyle(offset = NShiftPluginOffset(x = 4.0, y = 16.0)).offset.y shouldBe 16.0
     }
 
     test("fixed frame") {

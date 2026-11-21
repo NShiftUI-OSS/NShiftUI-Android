@@ -136,26 +136,125 @@ class NShiftRainbowCompiler(
     }
 
     private fun decodeStyle(parameters: List<RainbowParameter>): NShiftPluginStyle {
-        var spacing = 0.0
-        var alignment = NShiftPluginAlignment.Center
+        var width: Double? = null
+        var height: Double? = null
+        var minWidth: Double? = null
+        var maxWidth: Double? = null
+        var minHeight: Double? = null
+        var maxHeight: Double? = null
+        var background: NShiftPluginBackground? = null
+        var ignoreSafeArea = NShiftSafeAreaEdges.none
+        var offset = NShiftPluginOffset.zero
+        var animation: NShiftPluginAnimation? = null
         for (parameter in parameters) {
             when (parameter.name) {
-                "spacing" -> {
-                    spacing = when (val value = parameter.value) {
-                        is RainbowValue.IntValue -> value.value.toDouble()
-                        is RainbowValue.DoubleValue -> value.value
-                        else -> spacing
+                "width" -> width = number(parameter.value)
+                "height" -> height = number(parameter.value)
+                "minWidth" -> minWidth = number(parameter.value)
+                "maxWidth" -> maxWidth = number(parameter.value)
+                "minHeight" -> minHeight = number(parameter.value)
+                "maxHeight" -> maxHeight = number(parameter.value)
+                "background" -> background = background(parameter.value)
+                "ignoreSafeArea" -> ignoreSafeArea = edges(parameter.value)
+                "offset" -> offset = offset(parameter.value)
+                "animation" -> animation = animation(parameter.value)
+            }
+        }
+        val frame = try {
+            NShiftPluginFrame.of(
+                width = width,
+                height = height,
+                minWidth = minWidth?.let { NShiftPluginDimension.Value(it) },
+                maxWidth = maxWidth?.let { NShiftPluginDimension.Value(it) },
+                minHeight = minHeight?.let { NShiftPluginDimension.Value(it) },
+                maxHeight = maxHeight?.let { NShiftPluginDimension.Value(it) },
+            )
+        } catch (_: NShiftPluginFrameError) {
+            NShiftPluginFrame.empty()
+        }
+        return NShiftPluginStyle(
+            frame = frame,
+            background = background,
+            ignoreSafeArea = ignoreSafeArea,
+            offset = offset,
+            animation = animation,
+        )
+    }
+
+    private fun number(value: RainbowValue): Double? =
+        when (value) {
+            is RainbowValue.IntValue -> value.value.toDouble()
+            is RainbowValue.DoubleValue -> value.value
+            else -> null
+        }
+
+    private fun token(value: RainbowValue): String? =
+        when (value) {
+            is RainbowValue.Identifier -> value.value.removePrefix(".")
+            is RainbowValue.StringValue -> value.value.removePrefix(".")
+            else -> null
+        }
+
+    private fun edges(value: RainbowValue): NShiftSafeAreaEdges =
+        when (value) {
+            is RainbowValue.ArrayValue -> NShiftSafeAreaEdges.parse(value.values.mapNotNull(::token))
+            else -> NShiftSafeAreaEdges.parse(listOfNotNull(token(value)))
+        }
+
+    private fun background(value: RainbowValue): NShiftPluginBackground? {
+        val entries = (value as? RainbowValue.ObjectValue)?.entries ?: return null
+        var color: String? = null
+        var ignoreSafeArea = NShiftSafeAreaEdges.none
+        for (entry in entries) {
+            when (entry.key) {
+                "color" -> color = token(entry.value)
+                "ignoreSafeArea" -> ignoreSafeArea = edges(entry.value)
+            }
+        }
+        if (color == null && ignoreSafeArea.isEmpty) return null
+        return NShiftPluginBackground(color = color, ignoreSafeArea = ignoreSafeArea)
+    }
+
+    private fun offset(value: RainbowValue): NShiftPluginOffset {
+        val entries = (value as? RainbowValue.ObjectValue)?.entries ?: return NShiftPluginOffset.zero
+        var x = 0.0
+        var y = 0.0
+        for (entry in entries) {
+            when (entry.key) {
+                "x" -> x = number(entry.value) ?: x
+                "y" -> y = number(entry.value) ?: y
+            }
+        }
+        return NShiftPluginOffset(x = x, y = y)
+    }
+
+    private fun animation(value: RainbowValue): NShiftPluginAnimation? {
+        val entries = (value as? RainbowValue.ObjectValue)?.entries ?: return null
+        var isEnabled = false
+        var durationMillis = 300
+        var delayMillis = 0
+        var curve = NShiftAnimationCurve.EaseInOut
+        for (entry in entries) {
+            when (entry.key) {
+                "isEnabled" -> isEnabled = (entry.value as? RainbowValue.BoolValue)?.value ?: isEnabled
+                "duration" -> durationMillis = number(entry.value)?.toInt() ?: durationMillis
+                "delay" -> delayMillis = number(entry.value)?.toInt() ?: delayMillis
+                "curve" -> {
+                    curve = when (token(entry.value)) {
+                        "linear" -> NShiftAnimationCurve.Linear
+                        "easeIn" -> NShiftAnimationCurve.EaseIn
+                        "easeOut" -> NShiftAnimationCurve.EaseOut
+                        else -> NShiftAnimationCurve.EaseInOut
                     }
-                }
-                "alignment" -> {
-                    val name = (parameter.value as? RainbowValue.Identifier)?.value?.removePrefix(".")
-                    alignment = NShiftPluginAlignment.entries.firstOrNull { entry ->
-                        entry.name.replaceFirstChar { it.lowercase() } == name
-                    } ?: alignment
                 }
             }
         }
-        return NShiftPluginStyle(alignment = alignment, spacing = spacing)
+        return NShiftPluginAnimation(
+            isEnabled = isEnabled,
+            durationMillis = durationMillis,
+            delayMillis = delayMillis,
+            curve = curve,
+        )
     }
 
     private fun resolveVersion(name: String, pins: NShiftDSLVersionPins, isEvent: Boolean): NShiftVersion {

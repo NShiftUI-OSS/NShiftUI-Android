@@ -216,10 +216,15 @@ class NShiftRainbowCompilerTests : FunSpec({
             VerticalStack {
               Text(text: "A", size: 12)
             }
-            .style(spacing: 8)
+            .style(
+              offset: (
+                x: 4,
+                y: 8
+              )
+            )
         """.trimIndent()
         val model = defaultCompiler(defaultVersion = NShiftVersion(1, 0, 0)).compile(source)
-        model.style.spacing shouldBe 8.0
+        model.style.offset shouldBe NShiftPluginOffset(x = 4.0, y = 8.0)
     }
 
     test("compile document and compileAll") {
@@ -388,9 +393,13 @@ class NShiftRainbowCompilerTests : FunSpec({
             use VerticalStack@1.0.0
 
             VerticalStack()
-            .style(spacing: 8.5)
+            .style(
+              offset: (
+                y: 8.5
+              )
+            )
             """.trimIndent(),
-        ).style.spacing shouldBe 8.5
+        ).style.offset.y shouldBe 8.5
         defaultCompiler().compile(
             """
             use VerticalStack@1.0.0

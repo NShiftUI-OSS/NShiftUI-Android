@@ -102,8 +102,64 @@ sealed class NShiftPluginFrameError : Exception() {
     data object ContradictoryHeightConstraints : NShiftPluginFrameError()
 }
 
+data class NShiftSafeAreaEdges(
+    val top: Boolean = false,
+    val bottom: Boolean = false,
+    val leading: Boolean = false,
+    val trailing: Boolean = false,
+) {
+    val isEmpty: Boolean
+        get() = !top && !bottom && !leading && !trailing
+
+    companion object {
+        val none = NShiftSafeAreaEdges()
+        val all = NShiftSafeAreaEdges(top = true, bottom = true, leading = true, trailing = true)
+
+        fun parse(tokens: List<String>): NShiftSafeAreaEdges {
+            val names = tokens.map { it.removePrefix(".") }
+            if (names.contains("all")) return all
+            return NShiftSafeAreaEdges(
+                top = names.contains("top"),
+                bottom = names.contains("bottom"),
+                leading = names.contains("leading"),
+                trailing = names.contains("trailing"),
+            )
+        }
+    }
+}
+
+data class NShiftPluginOffset(
+    val x: Double = 0.0,
+    val y: Double = 0.0,
+) {
+    companion object {
+        val zero = NShiftPluginOffset()
+    }
+}
+
+data class NShiftPluginBackground(
+    val color: String? = null,
+    val ignoreSafeArea: NShiftSafeAreaEdges = NShiftSafeAreaEdges.none,
+)
+
+enum class NShiftAnimationCurve {
+    Linear,
+    EaseIn,
+    EaseOut,
+    EaseInOut,
+}
+
+data class NShiftPluginAnimation(
+    val isEnabled: Boolean = false,
+    val durationMillis: Int = 300,
+    val delayMillis: Int = 0,
+    val curve: NShiftAnimationCurve = NShiftAnimationCurve.EaseInOut,
+)
+
 data class NShiftPluginStyle(
     val frame: NShiftPluginFrame = NShiftPluginFrame.empty(),
-    val alignment: NShiftPluginAlignment = NShiftPluginAlignment.Center,
-    val spacing: Double = 0.0,
+    val background: NShiftPluginBackground? = null,
+    val ignoreSafeArea: NShiftSafeAreaEdges = NShiftSafeAreaEdges.none,
+    val offset: NShiftPluginOffset = NShiftPluginOffset.zero,
+    val animation: NShiftPluginAnimation? = null,
 )
