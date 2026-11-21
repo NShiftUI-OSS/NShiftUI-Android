@@ -5,6 +5,6 @@ import io.kotest.matchers.shouldBe
 
 class NShiftUIVersionTests : FunSpec({
     test("reports library version") {
-        NShiftUIVersion.current shouldBe "0.2.0-beta.1"
+        NShiftUIVersion.current shouldBe "0.2.0-beta.3"
     }
 })

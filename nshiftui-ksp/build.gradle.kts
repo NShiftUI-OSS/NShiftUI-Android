@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.nshiftui"
-version = "0.2.0-beta.1"
+version = "0.2.0-beta.3"
 
 kotlin {
     compilerOptions {
