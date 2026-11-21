@@ -7,7 +7,8 @@ ci_banner "job test"
 cd "$REPO_ROOT"
 ci_overlay_versioned_source
 ci_prepare_android_sdk
+ci_drop_cached_rainbow_parser
 [[ -x ./gradlew ]] || ci_die "./gradlew is missing or not executable"
 log_step "./gradlew test"
-./gradlew test --stacktrace
+./gradlew test --stacktrace --refresh-dependencies
 log_ok "tests passed"

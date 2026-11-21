@@ -3,6 +3,17 @@
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/helpers.sh"
 
+# RainbowParser-Android is republished at the same version. Gradle treats that
+# coordinate as immutable, and the restored cache can keep the previous AAR.
+ci_drop_cached_rainbow_parser() {
+  local home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+  local module="${home}/caches/modules-2/files-2.1/com.nshiftui.rainbowparser"
+  if [[ -d "$module" ]]; then
+    log_info "drop cached RainbowParser so the current release is downloaded"
+    rm -rf "$module"
+  fi
+}
+
 ci_overlay_versioned_source() {
   log_step "overlay versioned-source"
   local src=".ci-version"

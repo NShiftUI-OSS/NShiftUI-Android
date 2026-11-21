@@ -7,9 +7,10 @@ ci_banner "job assemble"
 cd "$REPO_ROOT"
 ci_overlay_versioned_source
 ci_prepare_android_sdk
+ci_drop_cached_rainbow_parser
 [[ -x ./gradlew ]] || ci_die "./gradlew is missing or not executable"
 log_step "./gradlew :nshiftui:assembleRelease :nshiftui-ksp:jar"
-./gradlew :nshiftui:assembleRelease :nshiftui-ksp:jar --stacktrace
+./gradlew :nshiftui:assembleRelease :nshiftui-ksp:jar --stacktrace --refresh-dependencies
 
 log_step "stage release AAR"
 mkdir -p build/outputs/aar
