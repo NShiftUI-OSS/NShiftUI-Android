@@ -128,6 +128,26 @@ data class NShiftSafeAreaEdges(
     }
 }
 
+data class NShiftPluginPadding(
+    val top: Int? = null,
+    val leading: Int? = null,
+    val trailing: Int? = null,
+    val horizontal: Int? = null,
+    val vertical: Int? = null,
+    val bottom: Int? = null,
+) {
+    val resolvedTop: Int get() = top ?: vertical ?: 0
+    val resolvedBottom: Int get() = bottom ?: vertical ?: 0
+    val resolvedLeading: Int get() = leading ?: horizontal ?: 0
+    val resolvedTrailing: Int get() = trailing ?: horizontal ?: 0
+    val isZero: Boolean
+        get() = resolvedTop == 0 && resolvedBottom == 0 && resolvedLeading == 0 && resolvedTrailing == 0
+
+    companion object {
+        val zero = NShiftPluginPadding()
+    }
+}
+
 data class NShiftPluginOffset(
     val x: Double = 0.0,
     val y: Double = 0.0,
@@ -159,6 +179,7 @@ data class NShiftPluginAnimation(
 data class NShiftPluginStyle(
     val frame: NShiftPluginFrame = NShiftPluginFrame.empty(),
     val background: NShiftPluginBackground? = null,
+    val padding: NShiftPluginPadding = NShiftPluginPadding.zero,
     val ignoreSafeArea: NShiftSafeAreaEdges = NShiftSafeAreaEdges.none,
     val offset: NShiftPluginOffset = NShiftPluginOffset.zero,
     val animation: NShiftPluginAnimation? = null,

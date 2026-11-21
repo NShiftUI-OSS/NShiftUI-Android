@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -99,6 +100,15 @@ fun Modifier.nShiftPluginStyle(style: NShiftPluginStyle): Modifier {
     val offsetY by animateDpAsState(style.offset.y.dp, spec, label = "nshift-offset-y")
     val frame = style.frame
     var modifier = this
+    val padding = style.padding
+    if (!padding.isZero) {
+        modifier = modifier.padding(
+            start = padding.resolvedLeading.dp,
+            top = padding.resolvedTop.dp,
+            end = padding.resolvedTrailing.dp,
+            bottom = padding.resolvedBottom.dp,
+        )
+    }
     if (frame.hasFixedWidth || frame.hasFixedHeight) {
         frame.width?.let { modifier = modifier.width(it.dp) }
         frame.height?.let { modifier = modifier.height(it.dp) }

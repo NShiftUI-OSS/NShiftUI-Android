@@ -379,6 +379,28 @@ class NShiftRainbowCompilerTests : FunSpec({
             .version.rawValue shouldBe "1.4.0"
     }
 
+    test("reads style padding and lets an edge override the axis") {
+        val padding = defaultCompiler().compile(
+            """
+            use Text@1.0.0
+
+            Text(text: "A")
+            .style(
+              padding: (
+                horizontal: 12,
+                leading: 2,
+                vertical: 10,
+                top: 4
+              )
+            )
+            """.trimIndent(),
+        ).style.padding
+        padding.resolvedTop shouldBe 4
+        padding.resolvedBottom shouldBe 10
+        padding.resolvedLeading shouldBe 2
+        padding.resolvedTrailing shouldBe 12
+    }
+
     test("reads id and style spacing double") {
         defaultCompiler().compile(
             """

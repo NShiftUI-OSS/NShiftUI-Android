@@ -143,6 +143,7 @@ class NShiftRainbowCompiler(
         var minHeight: Double? = null
         var maxHeight: Double? = null
         var background: NShiftPluginBackground? = null
+        var padding = NShiftPluginPadding.zero
         var ignoreSafeArea = NShiftSafeAreaEdges.none
         var offset = NShiftPluginOffset.zero
         var animation: NShiftPluginAnimation? = null
@@ -155,6 +156,7 @@ class NShiftRainbowCompiler(
                 "minHeight" -> minHeight = number(parameter.value)
                 "maxHeight" -> maxHeight = number(parameter.value)
                 "background" -> background = background(parameter.value)
+                "padding" -> padding = padding(parameter.value)
                 "ignoreSafeArea" -> ignoreSafeArea = edges(parameter.value)
                 "offset" -> offset = offset(parameter.value)
                 "animation" -> animation = animation(parameter.value)
@@ -175,6 +177,7 @@ class NShiftRainbowCompiler(
         return NShiftPluginStyle(
             frame = frame,
             background = background,
+            padding = padding,
             ignoreSafeArea = ignoreSafeArea,
             offset = offset,
             animation = animation,
@@ -214,6 +217,42 @@ class NShiftRainbowCompiler(
         if (color == null && ignoreSafeArea.isEmpty) return null
         return NShiftPluginBackground(color = color, ignoreSafeArea = ignoreSafeArea)
     }
+
+    private fun padding(value: RainbowValue): NShiftPluginPadding {
+        val entries = (value as? RainbowValue.ObjectValue)?.entries ?: return NShiftPluginPadding.zero
+        var top: Int? = null
+        var leading: Int? = null
+        var trailing: Int? = null
+        var horizontal: Int? = null
+        var vertical: Int? = null
+        var bottom: Int? = null
+        for (entry in entries) {
+            val amount = integer(entry.value)
+            when (entry.key) {
+                "top" -> top = amount
+                "leading" -> leading = amount
+                "trailing" -> trailing = amount
+                "horizontal" -> horizontal = amount
+                "vertical" -> vertical = amount
+                "bottom" -> bottom = amount
+            }
+        }
+        return NShiftPluginPadding(
+            top = top,
+            leading = leading,
+            trailing = trailing,
+            horizontal = horizontal,
+            vertical = vertical,
+            bottom = bottom,
+        )
+    }
+
+    private fun integer(value: RainbowValue): Int? =
+        when (value) {
+            is RainbowValue.IntValue -> value.value.toInt()
+            is RainbowValue.DoubleValue -> value.value.toInt()
+            else -> null
+        }
 
     private fun offset(value: RainbowValue): NShiftPluginOffset {
         val entries = (value as? RainbowValue.ObjectValue)?.entries ?: return NShiftPluginOffset.zero
