@@ -4,6 +4,8 @@ import com.nshiftui.rainbowparser.RainbowParser
 import com.nshiftui.rainbowparser.ast.RainbowDocument
 import com.nshiftui.rainbowparser.ast.RainbowNode
 import com.nshiftui.rainbowparser.ast.RainbowParameter
+import com.nshiftui.rainbowparser.ast.RainbowSlot
+import com.nshiftui.rainbowparser.ast.RainbowTrigger
 import com.nshiftui.rainbowparser.ast.RainbowUseDeclaration
 import com.nshiftui.rainbowparser.ast.RainbowValue
 data class NShiftRainbowCompileConfiguration(

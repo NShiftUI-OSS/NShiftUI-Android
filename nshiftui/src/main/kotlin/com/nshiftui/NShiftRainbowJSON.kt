@@ -44,13 +44,6 @@ object NShiftRainbowJSON {
             if (parameter.value is RainbowValue.Plugins) {
                 continue
             }
-            if (parameter.name == "id") {
-                continue
-            }
-            // Object style is layout spacing. A string style is metadata, such as Text size.
-            if (parameter.name == "style" && parameter.value is RainbowValue.ObjectValue) {
-                continue
-            }
             if (parameter.name in jsonTaggedParameters) {
                 val tagged = parameter.value as? RainbowValue.Tagged
                 val text = (tagged?.body as? RainbowTaggedBody.Text)?.value

@@ -72,8 +72,9 @@ class NShiftRainbowJSONTests : FunSpec({
         obj["token"] shouldBe "back"
         obj["tags"] shouldBe listOf("a", "b")
         (obj["nested"] as Map<*, *>)["inner"] shouldBe 1
-        obj.containsKey("id") shouldBe false
-        obj.containsKey("style") shouldBe false
+        obj.containsKey("id") shouldBe true
+        obj["id"] shouldBe "skip-me"
+        obj.containsKey("style") shouldBe true
     }
 
     test("keeps a string style and drops a layout style object") {
@@ -92,7 +93,7 @@ class NShiftRainbowJSONTests : FunSpec({
                 RainbowParameter("text", RainbowValue.StringValue("Entrada")),
             ),
         )
-        layout.containsKey("style") shouldBe false
+        layout.containsKey("style") shouldBe true
         layout["text"] shouldBe "Entrada"
     }
 
