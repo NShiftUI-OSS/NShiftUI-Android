@@ -115,7 +115,7 @@ fun NShiftDependencyRegistering.registerPlugin(
         val renderID = arguments[1] as? NShiftRenderID ?: return@register null
         val viewModel = arguments[2] as? NShiftPluginViewModel
         val eventHandler = container.resolveOrThrow(NShiftEventHandler::class)
-        val engine = container.resolve(NShiftEngine::class)
+        val engine = NShiftRenderingEngine.current() ?: container.resolve(NShiftEngine::class)
         val plugin = factory(model, container, eventHandler, engine, renderID, viewModel) ?: return@register null
         NShiftRegisteredPluginView { _, _ -> plugin.Content() }
     }

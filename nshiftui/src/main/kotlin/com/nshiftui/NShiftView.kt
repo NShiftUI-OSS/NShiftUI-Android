@@ -44,7 +44,12 @@ fun NShiftNodeView(
     viewModel: NShiftPluginViewModel? = null,
 ) {
     val content = engine.makeView(node, viewModel) ?: return
-    Box(modifier = Modifier.nShiftPluginStyle(node.model.style)) {
+    val frame = node.model.style.frame
+    Box(
+        modifier = Modifier.nShiftPluginStyle(node.model.style),
+        contentAlignment = Alignment.Center,
+        propagateMinConstraints = frame.hasFixedWidth || frame.hasFixedHeight,
+    ) {
         content()
     }
 }

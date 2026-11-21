@@ -29,7 +29,9 @@ open class NShiftDefaultEngine(
         node: NShiftPluginNode,
         viewModel: NShiftPluginViewModel?,
     ): (@androidx.compose.runtime.Composable () -> Unit)? =
-        pluginStore.resolve(node.model, node.renderId, viewModel)
+        NShiftRenderingEngine.perform(this) {
+            pluginStore.resolve(node.model, node.renderId, viewModel)
+        }
 
     override fun node(id: String): NShiftPluginNode? =
         nodesByServerID[id] ?: nodesByRenderID[NShiftRenderID(id)]
@@ -150,6 +152,22 @@ open class NShiftDefaultEngine(
         val current = forest[first]
         forest[first] = current.copy(events = children)
         return true
+    }
+}
+
+internal object NShiftRenderingEngine {
+    private val current = ThreadLocal<NShiftEngine?>()
+
+    fun current(): NShiftEngine? = current.get()
+
+    fun <T> perform(engine: NShiftEngine, operation: () -> T): T {
+        val previous = current.get()
+        current.set(engine)
+        try {
+            return operation()
+        } finally {
+            current.set(previous)
+        }
     }
 }
 
