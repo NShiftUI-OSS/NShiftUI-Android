@@ -27,10 +27,14 @@ data class NShiftRainbowCompileConfiguration(
 class NShiftRainbowCompiler(
     private val configuration: NShiftRainbowCompileConfiguration = NShiftRainbowCompileConfiguration.default,
 ) {
+    /** `use` declarations of the document being compiled, for template children. */
+    private var uses: List<RainbowUseDeclaration> = emptyList()
+
     fun compile(source: String): NShiftPluginModel = compile(RainbowParser().decode(source))
 
     fun compile(document: RainbowDocument): NShiftPluginModel {
         val root = document.nodes.firstOrNull() ?: throw NShiftRainbowCompileError.EmptyDocument
+        uses = document.uses
         val pins = makePins(document.uses)
         return compilePlugin(root, pins)
     }
@@ -38,6 +42,7 @@ class NShiftRainbowCompiler(
     fun compileAll(source: String): List<NShiftPluginModel> = compileAll(RainbowParser().decode(source))
 
     fun compileAll(document: RainbowDocument): List<NShiftPluginModel> {
+        uses = document.uses
         val pins = makePins(document.uses)
         return document.nodes.map { compilePlugin(it, pins) }
     }
@@ -56,12 +61,16 @@ class NShiftRainbowCompiler(
             throw NShiftRainbowCompileError.InvalidPluginName(node.name)
         }
         val version = resolveVersion(node.name, pins, isEvent = false)
-        val children = node.children.map { compilePlugin(it, pins) }
+        val decodedMetadata = decodeMetadata(node.name, node.parameters, pins, node.children)
+        val children = if (decodedMetadata.consumesChildren) {
+            emptyList()
+        } else {
+            node.children.map { compilePlugin(it, pins) }
+        }
         val slots = compileSlots(node.slots, pins)
             .mapValues { (_, models) -> models.toMutableList() }
             .toMutableMap()
         val events = compileModifierEvents(node.events, pins)
-        val decodedMetadata = decodeMetadata(node.name, node.parameters, pins)
         decodedMetadata.slots.forEach { (slot, models) ->
             slots.getOrPut(slot) { mutableListOf() }.addAll(models)
         }
@@ -137,16 +146,22 @@ class NShiftRainbowCompiler(
         pluginName: String,
         parameters: List<RainbowParameter>,
         pins: NShiftDSLVersionPins,
+        children: List<RainbowNode> = emptyList(),
     ): NShiftRainbowMetadataDecodeResult {
         val decoder = configuration.metadataDecoders[pluginName]
             ?: NShiftRainbowCatalog.decoder(pluginName)
             ?: return NShiftRainbowMetadataDecodeResult(metadata = null)
         return decoder.decode(
             parameters = parameters,
-            context = NShiftRainbowMetadataDecodingContext { parameterName ->
-                val plugins = pluginNodes(parameterName, parameters)
-                plugins.map { compilePlugin(it, pins) }
-            },
+            context = NShiftRainbowMetadataDecodingContext(
+                compilePlugins = { parameterName ->
+                    val plugins = pluginNodes(parameterName, parameters)
+                    plugins.map { compilePlugin(it, pins) }
+                },
+                childrenSource = {
+                    RainbowParser().encode(RainbowDocument(uses, children))
+                },
+            ),
         )
     }
 

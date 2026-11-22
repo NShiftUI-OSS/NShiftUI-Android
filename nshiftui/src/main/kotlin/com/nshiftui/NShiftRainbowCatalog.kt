@@ -52,7 +52,7 @@ object NShiftRainbowCatalog {
         override fun decode(parameters: List<RainbowParameter>): AnyNShiftMetadata? {
             return decode(
                 parameters = parameters,
-                context = NShiftRainbowMetadataDecodingContext { emptyList() },
+                context = NShiftRainbowMetadataDecodingContext(compilePlugins = { emptyList() }),
             ).metadata
         }
 

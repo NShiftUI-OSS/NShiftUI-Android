@@ -7,11 +7,19 @@ import com.nshiftui.rainbowparser.ast.RainbowValue
 
 data class NShiftRainbowMetadataDecodingContext(
     val compilePlugins: (String) -> List<NShiftPluginModel>,
+    /**
+     * The plugin's children as a standalone Rainbow document (with the screen's
+     * `use` declarations). Template plugins such as a `ForEach` keep it and
+     * compile it later, once per data item.
+     */
+    val childrenSource: () -> String = { "" },
 )
 
 data class NShiftRainbowMetadataDecodeResult(
     val metadata: AnyNShiftMetadata?,
     val slots: Map<NShiftSlotName, List<NShiftPluginModel>> = emptyMap(),
+    /** When true the compiler skips the children: the plugin consumed them as a template. */
+    val consumesChildren: Boolean = false,
 )
 
 interface NShiftRainbowPluginMetadata : NShiftMetadata {
@@ -128,7 +136,7 @@ class NShiftRainbowMapMetadataDecoder(
     override fun decode(parameters: List<RainbowParameter>): AnyNShiftMetadata? {
         return decode(
             parameters = parameters,
-            context = NShiftRainbowMetadataDecodingContext { emptyList() },
+            context = NShiftRainbowMetadataDecodingContext(compilePlugins = { emptyList() }),
         ).metadata
     }
 
