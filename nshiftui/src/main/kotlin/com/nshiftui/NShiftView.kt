@@ -70,17 +70,35 @@ fun NShiftView(model: NShiftPluginModel) {
         NShiftPluginContainerCatalog.shared.contains(model.name),
         "NShiftView requires a plugin model whose name is registered as a plugin container.",
     )
-    val rootID = model.id ?: NShiftRenderID.root.rawValue
-    val engine = remember(model) { NShiftEngineResolver.makeEngine(rootModel = model) }
-    val tree = engine as? NShiftEngineTree
+    val engine = remember(model) { makeNShiftEngine(model) }
+    NShiftView(engine)
+}
+
+/**
+ * Creates the engine [NShiftView] renders for [model]. Hosts that must keep a
+ * screen's live tree (appended children, view model state) while it is off
+ * screen can retain this engine and render it again with [NShiftView].
+ */
+fun makeNShiftEngine(model: NShiftPluginModel): NShiftEngineTree {
+    NShiftRuntimePrecondition.check(
+        NShiftPluginContainerCatalog.shared.contains(model.name),
+        "NShiftView requires a plugin model whose name is registered as a plugin container.",
+    )
+    return NShiftEngineResolver.makeEngine(rootModel = model) as? NShiftEngineTree
         ?: NShiftRuntimePrecondition.raise("NShiftView requires an engine that conforms to NShiftEngineTree.")
+}
+
+/** Renders an engine created by [makeNShiftEngine], keeping its current tree. */
+@Composable
+fun NShiftView(engine: NShiftEngineTree) {
+    val rootID = engine.rootID
     DisposableEffect(rootID, engine) {
         NShiftPluginContainerRegistry.shared.register(rootID, engine)
         onDispose {
             NShiftPluginContainerRegistry.shared.unregister(rootID)
         }
     }
-    NShiftNodeView(node = tree.root, engine = tree)
+    NShiftNodeView(node = engine.root, engine = engine)
 }
 
 val NShiftPluginAlignment.composeAlignment: Alignment
