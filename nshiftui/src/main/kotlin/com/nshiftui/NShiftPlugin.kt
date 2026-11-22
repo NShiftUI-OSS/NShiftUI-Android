@@ -337,7 +337,16 @@ abstract class NShiftPluginContainer<VM : NShiftPluginViewModel>(
         private set
 
     override fun onBind(): Boolean {
-        val resolved = resolver.resolve(viewModelType) ?: return false
+        // A container is rebound on every recomposition of its node view. Reusing
+        // the engine's view model keeps its state (sheets, pagination) instead of
+        // resolving a fresh instance each time.
+        val current = engine?.pluginViewModel
+        val resolved = if (viewModelType.isInstance(current)) {
+            @Suppress("UNCHECKED_CAST")
+            current as VM
+        } else {
+            resolver.resolve(viewModelType) ?: return false
+        }
         viewModel = resolved
         engine?.pluginViewModel = resolved
         return true

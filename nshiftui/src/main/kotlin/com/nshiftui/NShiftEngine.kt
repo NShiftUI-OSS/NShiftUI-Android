@@ -29,4 +29,18 @@ interface NShiftEngineTree : NShiftEngine {
         node: NShiftPluginNode,
         viewModel: NShiftPluginViewModel? = null,
     ): (@androidx.compose.runtime.Composable () -> Unit)?
+
+    /** Inserts [children] at [index] keeping the sibling nodes before it. */
+    fun insertChildren(pluginID: String, index: Int, children: List<NShiftPluginModel>) {
+        val node = node(pluginID) ?: return
+        val next = node.model.children.toMutableList()
+        next.addAll(index.coerceIn(0, next.size), children)
+        replaceChildren(pluginID, next)
+    }
+
+    /** Appends [models] to the slot [name] keeping the existing slot nodes. */
+    fun appendSlot(pluginID: String, name: NShiftSlotName, models: List<NShiftPluginModel>) {
+        val node = node(pluginID) ?: return
+        replaceSlot(pluginID, name, node.model.slots[name].orEmpty() + models)
+    }
 }

@@ -67,6 +67,26 @@ open class NShiftDefaultEngine(
         node.children.forEach(::indexSubtree)
     }
 
+    override fun insertChildren(pluginID: String, index: Int, children: List<NShiftPluginModel>) {
+        val node = node(pluginID) ?: return
+        if (children.isEmpty()) return
+        val models = node.model.children.toMutableList()
+        val position = index.coerceIn(0, models.size)
+        models.addAll(position, children)
+        val (removed, added) = node.insertChildren(children, position)
+        removed.forEach(::deindexSubtree)
+        node.model = node.model.replacingChildren(models)
+        added.forEach(::indexSubtree)
+    }
+
+    override fun appendSlot(pluginID: String, name: NShiftSlotName, models: List<NShiftPluginModel>) {
+        val node = node(pluginID) ?: return
+        if (models.isEmpty()) return
+        val added = node.appendSlotChildren(name, models)
+        node.model = node.model.replacingSlot(name, node.model.slots[name].orEmpty() + models)
+        added.forEach(::indexSubtree)
+    }
+
     override fun replaceSlots(pluginID: String, slots: Map<NShiftSlotName, List<NShiftPluginModel>>) {
         val node = node(pluginID) ?: return
         node.slotChildren.values.flatten().forEach(::deindexSubtree)
