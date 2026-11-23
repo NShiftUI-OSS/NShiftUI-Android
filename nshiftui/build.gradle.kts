@@ -50,7 +50,7 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
-    api("com.nshiftui.rainbowparser:rainbowparser:0.1.0-beta.1:release@aar")
+    api("com.nshiftui.rainbowparser:rainbowparser:1.0.0:release@aar")
 
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
