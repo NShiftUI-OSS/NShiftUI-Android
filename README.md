@@ -1,8 +1,8 @@
 # NShiftUI (Android)
 
-Runtime de plugins e events NShiftUI para Android. Alvo: **minSdk API 23** (Android 6.0), versão `0.2.0-beta.1`. Pacote `com.nshiftui`.
+Runtime de plugins e events NShiftUI para Android. Alvo: **minSdk API 23** (Android 6.0), versão `1.0.0`. Pacote `com.nshiftui`.
 
-Sintaxe Rainbow vive em [RainbowParser-Android](https://github.com/NShiftUI-OSS/RainbowParser-Android) `0.1.0-beta.1`. Este AAR faz a semântica (`NShiftRainbowCompiler`), DI, engine e `NShiftView`.
+Sintaxe Rainbow vive em [RainbowParser-Android](https://github.com/NShiftUI-OSS/RainbowParser-Android) `1.0.0`. Este AAR faz a semântica (`NShiftRainbowCompiler`), DI, engine e `NShiftView`.
 
 KSP é opcional (`:nshiftui-ksp`). Sem KSP, plugins e events herdam `NShiftPlugin` / `NShiftEvent`.
 
@@ -10,7 +10,7 @@ KSP é opcional (`:nshiftui-ksp`). Sem KSP, plugins e events herdam `NShiftPlugi
 
 Requer Android SDK (`ANDROID_HOME` ou `local.properties` com `sdk.dir`). Toolchain: Gradle 9.7.1, AGP 9.4.1, Kotlin 2.4.20, Compose BOM 2026.09.00, `compileSdk` 37, bytecode Java 21. O daemon usa JDK 25 (`gradle/gradle-daemon-jvm.properties`).
 
-O parser resolve-se pelo AAR da GitHub Release `v0.1.0-beta.1` (Ivy em `settings.gradle.kts`).
+O parser resolve-se pelo AAR da GitHub Release `v1.0.0` (Ivy em `settings.gradle.kts`).
 
 ```bash
 ./gradlew test
@@ -29,6 +29,6 @@ Os YAML em `.github/workflows/` só orquestram. A lógica de cada job está em `
 
 ```bash
 ALLOWED_ACTOR=ArthurPorto-PucMinas GITHUB_ACTOR=ArthurPorto-PucMinas \
-  VERSION_INPUT=0.2.0-beta.1 BRANCH_INPUT=main \
+  VERSION_INPUT=1.2.3 BRANCH_INPUT=main \
   bash scripts/ci/release/setup.sh
 ```
